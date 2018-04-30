@@ -23,14 +23,24 @@ urlpatterns = [
     path('update/', views.Update.as_view(), name='update'),
     path('login/', views.login_view, name='cognito-login'),
     path('logout/', views.logout_view, name='cognito-logout'),
+
+    # AUTHORISED MFA SETTINGS
     path(
         'mfa-settings/',
         login_required(views.MFASettings.as_view()),
         name='mfa-settings'
     ),
+    path(
+        'associate-mfa/',
+        login_required(views.SetSoftwareMFA.as_view()),
+        name='associate-mfa'
+    ),
+
+    # MFA FORMS
     path('sms-mfa/', views.SMSMFA.as_view(), name='sms-mfa'),
     path('software-mfa/', views.SoftwareMFA.as_view(), name='software-mfa'),
-    path('associate-mfa/', views.SetSoftwareMFA.as_view(), name='associate-mfa'),
+
+    # UPDATE PASSWORD ON FORCE PASSWORD CHANGE
     path(
         'update-password/',
         views.ForceChangePassword.as_view(),

@@ -1,0 +1,6 @@
+<h2>Authenticate MFA with {{ mfa_type }}</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Continue</button>
+</form>

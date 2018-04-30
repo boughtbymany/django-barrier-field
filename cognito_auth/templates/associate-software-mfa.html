@@ -1,0 +1,11 @@
+{% load static %}
+
+<h2>Authenticate MFA with {{ mfa_type }}</h2>
+<body>
+    <img src='{% static qr_code %}' alt="">
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Continue</button>
+    </form>
+</body>

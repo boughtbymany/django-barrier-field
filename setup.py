@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 from barrier_field import __version__
 
@@ -8,7 +8,7 @@ setup(
     description='It will be your shield.',
     author='Bought By Many',
     author_email='bbm@boughtbymany.com',
-    packages=['barrier_field'],
+    packages=find_packages(),
     url='https://boughtbymany.com',
     zip_safe=False,
     install_requires=[

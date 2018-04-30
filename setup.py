@@ -12,6 +12,7 @@ setup(
     url='https://boughtbymany.com',
     zip_safe=False,
     install_requires=[
+        'Django==2.0.4',
         'warrant==0.6.1'
     ],
     include_package_data=True,

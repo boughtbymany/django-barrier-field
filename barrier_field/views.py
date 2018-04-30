@@ -1,7 +1,7 @@
 from uuid import uuid4
 import qrcode
-from django.contrib.auth.decorators import login_required
 
+from django.contrib.auth.decorators import login_required
 from django.core.files import File
 from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate, login, logout
@@ -15,7 +15,6 @@ from barrier_field import forms
 from barrier_field.backend import register, complete_login
 from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware
-from barrier_field.utils import get_attr_map
 
 
 def login_view(request):

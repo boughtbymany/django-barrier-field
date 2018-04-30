@@ -3,7 +3,7 @@ from setuptools import setup
 from barrier_field import __version__
 
 setup(
-    name='barrier_field',
+    name='django-barrier-field',
     version=__version__,
     description='It will be your shield.',
     author='Bought By Many',
@@ -13,7 +13,8 @@ setup(
     zip_safe=False,
     install_requires=[
         'Django==2.0.4',
-        'warrant==0.6.1'
+        'warrant==0.6.1',
+        'qrcode[pil]==6.0.0'
     ],
     include_package_data=True,
     classifiers=[

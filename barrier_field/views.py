@@ -11,11 +11,11 @@ from django.urls import reverse
 from django.views.generic import FormView, TemplateView
 from warrant.exceptions import ForceChangePasswordException
 
-from cognito_auth import forms
-from cognito_auth.backend import register, complete_login
-from cognito_auth.client import cognito
-from cognito_auth.exceptions import MFARequiredSMS, MFARequiredSoftware
-from cognito_auth.utils import get_attr_map
+from barrier_field import forms
+from barrier_field.backend import register, complete_login
+from barrier_field.client import cognito
+from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware
+from barrier_field.utils import get_attr_map
 
 
 def login_view(request):

@@ -3,8 +3,8 @@ from django.core.management.base import BaseCommand
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 
-from cognito_auth.client import cognito
-from cognito_auth.utils import get_attr_map, \
+from barrier_field.client import cognito
+from barrier_field.utils import get_attr_map, \
     get_custom_attrs_from_options, get_custom_attrs, \
     generate_temporary_password, get_required_attrs
 

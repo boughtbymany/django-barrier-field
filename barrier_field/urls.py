@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib.auth.decorators import login_required
 from django.urls import path
 
-from cognito_auth import views
+from barrier_field import views
 
 urlpatterns = [
     path('register/', views.Register.as_view(), name='register'),

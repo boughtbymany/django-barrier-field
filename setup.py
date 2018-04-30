@@ -1,14 +1,14 @@
 from setuptools import setup
 
-from cognito_auth import __version__
+from barrier_field import __version__
 
 setup(
-    name='cognito_auth',
+    name='barrier_field',
     version=__version__,
-    description='Cognito auth package.',
+    description='It will be your shield.',
     author='Bought By Many',
     author_email='bbm@boughtbymany.com',
-    packages=['cognito_auth'],
+    packages=['barrier_field'],
     url='https://boughtbymany.com',
     zip_safe=False,
     install_requires=[

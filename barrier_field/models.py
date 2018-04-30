@@ -1,8 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
-from cognito_auth.client import cognito
-from cognito_auth.utils import get_attr_map, \
+from barrier_field.client import cognito
+from barrier_field.utils import get_attr_map, \
     get_custom_attrs_from_options
 
 

@@ -3,9 +3,9 @@ from django.contrib.auth import get_user_model, authenticate, login
 from warrant import Cognito
 from warrant.exceptions import ForceChangePasswordException
 
-from cognito_auth.client import cognito
-from cognito_auth.exceptions import MFARequiredSMS, MFARequiredSoftware
-from cognito_auth.utils import get_attr_map
+from barrier_field.client import cognito
+from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware
+from barrier_field.utils import get_attr_map
 
 
 def register(request, new_user):

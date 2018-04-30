@@ -2,7 +2,7 @@ from django.conf import settings
 from types import MethodType
 from warrant import Cognito, AWSSRP
 
-from cognito_auth.exceptions import MFARequiredSMS, MFARequiredSoftware
+from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware
 
 cognito = Cognito(
     settings.COGNITO_USER_POOL_ID,

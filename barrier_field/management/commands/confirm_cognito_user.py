@@ -1,6 +1,6 @@
 from django.core.management import BaseCommand
 
-from cognito_auth.client import cognito
+from barrier_field.client import cognito
 
 
 class Command(BaseCommand):

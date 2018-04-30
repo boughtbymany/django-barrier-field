@@ -1,4 +1,4 @@
 from django.contrib import admin
-from cognito_auth.models import User
+from barrier_field.models import User
 
 admin.site.register(User)

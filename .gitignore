@@ -40,7 +40,7 @@ Thumbs.db
 # Crap
 *~
 
-.idea/workspace.xml
+.idea
 
 # Don't include env folders/files
 dist/

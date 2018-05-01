@@ -36,15 +36,9 @@ class CognitoAuth:
         :param password:
         :return:
         """
-        if cognito_auth:
-            # If user already authenticated with MFA
-            cognito.access_token = cognito_auth['AuthenticationResult']['AccessToken']
-            cognito_user = cognito
-            user = cognito_user.get_user(self.cognito_mapping)
-            self.sync_cache(user)
-            cache_user = self.Users.objects.get(username=user.pk)
-            return cache_user
-        else:
+        cognito_user = cognito
+
+        if not cognito_auth:
             # New user session authentication
             cognito_user = cognito
             cognito.username = username
@@ -52,10 +46,12 @@ class CognitoAuth:
                 cognito_user.authenticate(password, request)
             except Exception as e:
                 self.auth_error_handler(e, cognito_user, password)
-            user = cognito_user.get_user(self.cognito_mapping)
-            self.sync_cache(user)
-            cache_user = self.Users.objects.get(username=user.pk)
-            return cache_user
+
+        self.update_session(request)
+        user = cognito_user.get_user(self.cognito_mapping)
+        self.sync_cache(user)
+        cache_user = self.Users.objects.get(username=user.pk)
+        return cache_user
 
     def sync_cache(self, cognito_user, deactivate=False):
         """
@@ -116,6 +112,17 @@ class CognitoAuth:
                     raise exception
             else:
                 raise exception
+
+    def update_session(self, request):
+        """
+            Add refresh token to the session so it can be accessed
+        """
+        request.session['cognito_auth'] = {
+            'access_token': cognito.access_token,
+            'refresh_token': cognito.refresh_token,
+            'token_type': cognito.token_type,
+            'id_token': cognito.id_token
+        }
 
 
 def complete_login(request, auth_response):

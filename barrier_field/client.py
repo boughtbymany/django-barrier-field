@@ -58,22 +58,29 @@ def admin_enable_user(self):
     )
 
 
-def respond_to_auth_challenge(self, challenge, response, username, session):
-    if challenge == 'SMS_MFA':
+def respond_to_auth_challenge(self, challenge_type, challenge_response,
+                              username, session):
+    if challenge_type == 'SMS_MFA':
         response_code = 'SMS_MFA_CODE'
     else:
         response_code = 'SOFTWARE_TOKEN_MFA_CODE'
-    response = self.client.admin_respond_to_auth_challenge(
+    tokens = self.client.admin_respond_to_auth_challenge(
         UserPoolId=self.user_pool_id,
         ClientId=self.client_id,
         Session=session,
-        ChallengeName=challenge,
+        ChallengeName=challenge_type,
         ChallengeResponses={
-            response_code: response,
+            response_code: challenge_response,
             'USERNAME': username
         }
     )
-    return response
+    self.verify_token(tokens['AuthenticationResult']['IdToken'], 'id_token',
+                      'id')
+    self.refresh_token = tokens['AuthenticationResult']['RefreshToken']
+    self.verify_token(tokens['AuthenticationResult']['AccessToken'],
+                      'access_token', 'access')
+    self.token_type = tokens['AuthenticationResult']['TokenType']
+    return tokens
 
 
 def associate_software_token(self, request):

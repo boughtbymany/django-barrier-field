@@ -1,14 +1,12 @@
 from uuid import uuid4
 import qrcode
 
-from django.contrib.auth.decorators import login_required
-from django.core.files import File
 from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.contrib.auth.views import LoginView, LogoutView
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import redirect
 from django.urls import reverse
-from django.views.generic import FormView, TemplateView
+from django.views.generic import FormView
 from warrant.exceptions import ForceChangePasswordException
 
 from barrier_field import forms
@@ -33,7 +31,7 @@ def login_view(request):
 def logout_view(request):
     user = get_user_model().objects.get(username=request.user.username)
     logout(request)
-    if getattr(settings, 'CLEAR_USER_ON_LOGOUT', True):
+    if getattr(settings, 'CLEAR_USER_ON_LOGOUT', False):
         user.delete()
     return LogoutView.as_view()(request)
 

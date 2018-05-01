@@ -1,6 +1,30 @@
+import glob
+from pathlib import Path
 from setuptools import setup, find_packages
 
 from barrier_field import __version__
+
+
+def build_template_files(template_dir):
+    # Build template data_files
+    directories = [
+        template_dir
+    ]
+    for filename in glob.iglob(f'{template_dir}/**/*', recursive=True):
+        file_path = Path(filename)
+        if file_path.is_dir():
+            directories.append(str(file_path))
+
+    template_files = []
+    for directory in directories:
+        directory_listing = (directory, [])
+        for filename in glob.iglob(f'{directory}/*', recursive=True):
+            if Path(filename).is_dir():
+                continue
+            directory_listing[1].append(Path(filename).name)
+        template_files.append(directory_listing)
+    return template_files
+
 
 setup(
     name='django-barrier-field',
@@ -9,6 +33,7 @@ setup(
     author='Bought By Many',
     author_email='bbm@boughtbymany.com',
     packages=find_packages(),
+    data_files=build_template_files('barrier_field/templates'),
     url='https://boughtbymany.com',
     zip_safe=False,
     install_requires=[

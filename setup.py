@@ -1,4 +1,5 @@
 import glob
+import logging
 from pathlib import Path
 from setuptools import setup, find_packages
 
@@ -33,7 +34,7 @@ setup(
     author='Bought By Many',
     author_email='bbm@boughtbymany.com',
     packages=find_packages(),
-    data_files=build_template_files('barrier_field/templates'),
+    data_files=build_template_files('templates'),
     url='https://boughtbymany.com',
     zip_safe=False,
     install_requires=[

@@ -1,11 +1,15 @@
+import os
 from uuid import uuid4
 import qrcode
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.contrib.auth.views import LoginView, LogoutView
+from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 from django.views.generic import FormView
 from warrant.exceptions import ForceChangePasswordException
 
@@ -14,26 +18,44 @@ from barrier_field.backend import register, complete_login
 from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware
 
+class CognitoLogIn(LoginView):
+    form_class = forms.LoginForm
 
-def login_view(request):
-    try:
-        return LoginView.as_view()(request)
-    except ForceChangePasswordException:
-        # New user must change their temporary password
-        request.session['login_data'] = request.POST
-        return redirect(reverse('force-change-password'))
-    except MFARequiredSMS:
-        return redirect(reverse('sms-mfa'))
-    except MFARequiredSoftware:
-        return redirect(reverse('software-mfa'))
+    def form_valid(self, form):
+        try:
+            user = authenticate(
+                self.request,
+                username=form.cleaned_data['username'],
+                password=form.cleaned_data['password']
+            )
+            login(self.request, user)
+        except ForceChangePasswordException:
+            # New user must change their temporary password
+            self.request.session['login_data'] = self.request.POST
+            return redirect(reverse('force-change-password'))
+        except MFARequiredSMS:
+            return redirect(reverse('sms-mfa'))
+        except MFARequiredSoftware:
+            return redirect(reverse('software-mfa'))
+        else:
+            return HttpResponseRedirect(self.get_success_url())
 
 
-def logout_view(request):
-    user = get_user_model().objects.get(username=request.user.username)
-    logout(request)
-    if getattr(settings, 'CLEAR_USER_ON_LOGOUT', False):
-        user.delete()
-    return LogoutView.as_view()(request)
+class CognitoLogOut(LogoutView):
+    @method_decorator(never_cache)
+    def dispatch(self, request, *args, **kwargs):
+        username = request.user.username
+        logout(request)
+
+        if getattr(settings, 'CLEAR_USER_ON_LOGOUT', False):
+            db_user = get_user_model().objects.get(username=username)
+            db_user.delete()
+
+        next_page = self.get_next_page()
+        if next_page:
+            # Redirect to this page until the session has been cleared.
+            return HttpResponseRedirect(next_page)
+        return super().dispatch(request, *args, **kwargs)
 
 
 class Register(FormView):
@@ -106,6 +128,28 @@ class ForceChangePassword(FormView):
             return redirect('/')
 
 
+class ChangePassword(FormView):
+    form_class = forms.PasswordChangeForm
+    template_name = 'update_cognito_password.html'
+
+    def form_valid(self, form):
+        current_password = form.cleaned_data['current_password']
+        new_password = form.cleaned_data['new_password1']
+        try:
+            cognito.change_password(current_password, new_password)
+        except Exception as e:
+            try:
+                error = e.response['Error']
+            except AttributeError:
+                raise AttributeError('Something went wrong there...')
+            if error['Code'] == 'InvalidPasswordException':
+                form.add_error(field='new_password1', error=error['Message'])
+                return super(ChangePassword, self).form_invalid(form)
+        else:
+            return redirect(
+                getattr(settings, 'PASSWORD_CHANGE_REDIRECT_URL'), '/'
+            )
+
 class SMSMFA(FormView):
     form_class = forms.MFACode
     template_name = 'authenticate_mfa.html'
@@ -157,6 +201,7 @@ class SetSoftwareMFA(FormView):
         OTP = f'otpauth://totp/Username:{self.request.user.username}?secret={secret_code}&issuer=BoughtByMany'
         qr_code = qrcode.make(OTP)
         save_location = f'static/temp/code-{uuid4()}.png'
+        self.request.session['qr_code_loc'] = save_location
         qr_code.save(save_location)
         context['qr_code'] = save_location.replace('static/', '')
         context['token_code'] = secret_code
@@ -164,6 +209,10 @@ class SetSoftwareMFA(FormView):
         return context
 
     def form_valid(self, form):
+        # Remove temp QR code
+        qr_code_loc = self.request.session['qr_code_loc']
+        os.remove(qr_code_loc)
+
         code = form.cleaned_data['mfa_code']
         response = cognito.verify_software_token(self.request, code)
         if response['Status'] == 'SUCCESS':

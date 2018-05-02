@@ -21,8 +21,8 @@ from barrier_field import views
 urlpatterns = [
     path('register/', views.Register.as_view(), name='register'),
     path('update/', views.Update.as_view(), name='update'),
-    path('login/', views.login_view, name='cognito-login'),
-    path('logout/', views.logout_view, name='cognito-logout'),
+    path('login/', views.CognitoLogIn.as_view(), name='cognito-login'),
+    path('logout/', views.CognitoLogOut.as_view(), name='cognito-logout'),
 
     # AUTHORISED MFA SETTINGS
     path(
@@ -45,6 +45,11 @@ urlpatterns = [
         'update-password/',
         views.ForceChangePassword.as_view(),
         name='force-change-password'
+    ),
+    path(
+        'change-password/',
+        views.ChangePassword.as_view(),
+        name='change-password'
     ),
 
 ]

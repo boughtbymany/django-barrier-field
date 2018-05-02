@@ -1,10 +1,8 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate, login
 from warrant import Cognito
-from warrant.exceptions import ForceChangePasswordException
 
 from barrier_field.client import cognito
-from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware
 from barrier_field.utils import get_attr_map
 
 
@@ -45,7 +43,8 @@ class CognitoAuth:
             try:
                 cognito_user.authenticate(password, request)
             except Exception as e:
-                self.auth_error_handler(e, cognito_user, password)
+                resp = self.auth_error_handler(e, cognito_user)
+                return resp
 
         self.update_session(request)
         user = cognito_user.get_user(self.cognito_mapping)
@@ -89,40 +88,40 @@ class CognitoAuth:
                     **cognito_user._data
                 )
 
-    def auth_error_handler(self, exception, cognito_user, password):
-        if isinstance(exception, ForceChangePasswordException):
-            # Prompt user to update their password here. Redirect to view.
-            raise ForceChangePasswordException()
-        elif isinstance(exception, MFARequiredSMS):
-            raise MFARequiredSMS()
-        elif isinstance(exception, MFARequiredSoftware):
-            raise MFARequiredSoftware()
+    def auth_error_handler(self, exception, cognito_user):
+        """
+        Handle generic botocore 'errorfactory' errors
+        """
+        if not getattr(exception, 'response', False):
+            raise exception
+        error = exception.response.get('Error')
+        if error:
+            if error['Code'] == 'NotAuthorizedException':
+                # Handle disabled user
+                if error['Message'] == 'User is disabled':
+                    self.sync_cache(
+                        {'username': cognito_user.username}, deactivate=True
+                    )
+                    return None
+                if error['Message'] == 'Incorrect username or password.':
+                    return None
+            if error['Code'] == 'UserNotFoundException':
+                return None
+            raise exception
         else:
-            # Handle botocore exceptions
-            if not getattr(exception, 'response', False):
-                raise exception
-            error = exception.response.get('Error')
-            if error:
-                if error['Code'] == 'NotAuthorizedException':
-                    # Handle disabled user
-                    if error['Message'] == 'User is disabled':
-                        self.sync_cache(
-                            {'username': cognito_user.username}, deactivate=True
-                        )
-                    raise exception
-            else:
-                raise exception
+            raise exception
 
     def update_session(self, request):
         """
             Add refresh token to the session so it can be accessed
         """
-        request.session['cognito_auth'] = {
-            'access_token': cognito.access_token,
-            'refresh_token': cognito.refresh_token,
-            'token_type': cognito.token_type,
-            'id_token': cognito.id_token
-        }
+        if getattr(request, 'session', False):
+            request.session['cognito_auth'] = {
+                'access_token': cognito.access_token,
+                'refresh_token': cognito.refresh_token,
+                'token_type': cognito.token_type,
+                'id_token': cognito.id_token
+            }
 
 
 def complete_login(request, auth_response):

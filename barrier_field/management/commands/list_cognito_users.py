@@ -19,4 +19,3 @@ class Command(BaseCommand):
             }
             display_users.append(info)
         self.stdout.write(json.dumps(display_users, indent=4))
-

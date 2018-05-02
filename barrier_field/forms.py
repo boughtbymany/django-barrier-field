@@ -13,7 +13,9 @@ class LoginForm(AuthenticationForm):
 
         if username is not None and password:
             try:
-                self.user_cache = authenticate(self.request, username=username, password=password)
+                self.user_cache = authenticate(
+                    self.request, username=username, password=password
+                )
             except catch_login_exceptions:
                 # Carry on and catch exception in view
                 return self.cleaned_data

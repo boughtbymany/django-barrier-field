@@ -11,6 +11,7 @@ cognito = Cognito(
     secret_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None)
 )
 
+
 def register_method(method):
     setattr(cognito, f'{method.__name__}', MethodType(method, cognito))
 
@@ -45,10 +46,10 @@ def authenticate(self, password, request):
 
 
 def admin_disable_user(self):
-     self.client.admin_disable_user(
-         UserPoolId=self.user_pool_id,
-         Username=self.username
-     )
+    self.client.admin_disable_user(
+        UserPoolId=self.user_pool_id,
+        Username=self.username
+    )
 
 
 def admin_enable_user(self):

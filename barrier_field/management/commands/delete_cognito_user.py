@@ -14,4 +14,3 @@ class Command(BaseCommand):
         cognito.username = username
         cognito.admin_delete_user()
         self.stdout.write(f'User {username} deleted')
-

@@ -17,6 +17,7 @@ def register(request, new_user):
     )
     cog.register(new_user['username'], new_user['password'])
 
+
 class CognitoAuth:
     Users = get_user_model()
     cognito_mapping = get_attr_map()

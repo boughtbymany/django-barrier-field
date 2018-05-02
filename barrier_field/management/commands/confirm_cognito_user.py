@@ -16,4 +16,3 @@ class Command(BaseCommand):
         except Exception as e:
             self.stderr.write(f'Error: {e}')
         self.stdout.write(f'User {username} confirmed')
-

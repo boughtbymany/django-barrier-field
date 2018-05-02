@@ -18,6 +18,7 @@ from barrier_field.backend import register, complete_login
 from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware
 
+
 class CognitoLogIn(LoginView):
     form_class = forms.LoginForm
 
@@ -150,6 +151,7 @@ class ChangePassword(FormView):
                 getattr(settings, 'PASSWORD_CHANGE_REDIRECT_URL'), '/'
             )
 
+
 class SMSMFA(FormView):
     form_class = forms.MFACode
     template_name = 'authenticate_mfa.html'
@@ -198,7 +200,7 @@ class SetSoftwareMFA(FormView):
         context = super(SetSoftwareMFA, self).get_context_data(**kwargs)
         response = cognito.associate_software_token(self.request)
         secret_code = response['SecretCode']
-        OTP = f'otpauth://totp/Username:{self.request.user.username}?secret={secret_code}&issuer=BoughtByMany'
+        OTP = f'otpauth://totp/Username:{self.request.user.username}?secret={secret_code}&issuer=BoughtByMany'  # noqa: E501
         qr_code = qrcode.make(OTP)
         save_location = f'static/temp/code-{uuid4()}.png'
         self.request.session['qr_code_loc'] = save_location

@@ -10,7 +10,8 @@ class RefreshCognito:
     def __call__(self, request):
         response = self.get_response(request)
 
-        if (request.user.is_authenticated and
+        if (
+                request.user.is_authenticated and
                 request.session.get('cognito_auth') and
                 not cognito.access_token
         ):

@@ -120,6 +120,10 @@ def generate_temporary_password():
 
 
 def get_user_data_model():
+    """
+    If a user data model has been specified in the settings, return the model.
+    Otherwise return False
+    """
     data_model_location =  getattr(settings, 'USER_DATA_MODEL', False)
     if data_model_location:
         return apps.get_model(
@@ -130,6 +134,10 @@ def get_user_data_model():
 
 
 def get_user_data_model_fields():
+    """
+    If a user data model exists, return all the fields of the model. Otherwise
+    return False
+    """
     user_data_model = get_user_data_model()
     if user_data_model:
         data_model_fields = [

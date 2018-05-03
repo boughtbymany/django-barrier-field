@@ -35,6 +35,9 @@ class CognitoAuth:
         :param request:
         :param username:
         :param password:
+        :param cognito_auth: If cognito user has already been authorised,
+        and you are completing authentication (for example, force changing
+        password or completeing MFA), send the authorised cognito token
         :return:
         """
         cognito_user = cognito
@@ -48,6 +51,16 @@ class CognitoAuth:
             except Exception as e:
                 resp = self.auth_error_handler(e, cognito_user)
                 return resp
+        else:
+            # Validate authentication
+            cognito.verify_token(
+                cognito_auth['AuthenticationResult']['IdToken'],
+                'id_token','id'
+            )
+            cognito.verify_token(
+                cognito_auth['AuthenticationResult']['AccessToken'],
+                'access_token', 'access'
+            )
 
         self.update_session(request)
         user = cognito_user.get_user(self.cognito_mapping)

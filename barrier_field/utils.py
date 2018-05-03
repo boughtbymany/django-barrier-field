@@ -2,6 +2,7 @@ import random
 import secrets
 import string
 
+from django.apps import apps
 from django.conf import settings
 
 
@@ -76,14 +77,15 @@ def get_custom_attrs_from_options(options):
     custom_attrs = get_custom_attrs()
     custom_attributes = {}
     for attr in custom_attrs.keys():
-        if custom_attrs[attr] == str:
-            custom_attributes[attr] = options[attr]
-        elif custom_attrs[attr] == int:
-            custom_attributes[attr] = str(options[attr])
-        elif custom_attrs[attr] == bool:
-            custom_attributes[attr] = str(int(options[attr]))
-        else:
-            raise AttributeError()
+        if attr in options.keys():
+            if custom_attrs[attr] == str:
+                custom_attributes[attr] = options[attr]
+            elif custom_attrs[attr] == int:
+                custom_attributes[attr] = str(options[attr])
+            elif custom_attrs[attr] == bool:
+                custom_attributes[attr] = str(int(options[attr]))
+            else:
+                raise AttributeError()
     return custom_attributes
 
 
@@ -115,3 +117,24 @@ def generate_temporary_password():
     password.extend(requirements)
     random.shuffle(password)
     return "".join(password)
+
+
+def get_user_data_model():
+    data_model_location =  getattr(settings, 'USER_DATA_MODEL', False)
+    if data_model_location:
+        return apps.get_model(
+            data_model_location, require_ready=False
+        )
+    else:
+        return False
+
+
+def get_user_data_model_fields():
+    user_data_model = get_user_data_model()
+    if user_data_model:
+        data_model_fields = [
+            field.name for field in user_data_model._meta.fields
+        ]
+        return data_model_fields
+    else:
+        return False

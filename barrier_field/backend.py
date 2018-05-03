@@ -1,9 +1,11 @@
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate, login
 from warrant import Cognito
 
 from barrier_field.client import cognito
-from barrier_field.utils import get_attr_map
+from barrier_field.utils import get_attr_map, get_user_data_model_fields, \
+    get_user_data_model
 
 
 def register(request, new_user):
@@ -74,20 +76,52 @@ class CognitoAuth:
                     # Reactive user
                     local_user.is_active = True
 
-                # Update fields
-                for field in cognito_user._data.keys():
+                cognito_data = cognito_user._data
+
+                user_data_fields = get_user_data_model_fields()
+                if user_data_fields:
+                    user_data_update = {}
+                    for field in [*cognito_data.keys()].copy():
+                        if field in user_data_fields:
+                            user_data_update[field] = cognito_data.pop(field)
+
+                    # Update user data
+                    user_data_object = get_user_data_model().objects.filter(
+                        pk=local_user.user_data_id
+                    )
+                    user_data_object.update(**user_data_update)
+
+                for field in cognito_data.keys():
                     cognito_field_value = getattr(cognito_user, field)
                     if isinstance(getattr(local_user, field), bool):
                         cognito_field_value = bool(int(cognito_field_value))
                     setattr(local_user, field, cognito_field_value)
 
                 local_user.save()
-            except self.Users.DoesNotExist as e:
+            except self.Users.DoesNotExist:
                 # Create new cached user
-                self.Users.objects.create_user(
-                    username=cognito_user.username, password=None,
-                    **cognito_user._data
-                )
+
+                # First check whether a custom data model exists
+                user_data_fields = get_user_data_model_fields()
+                if user_data_fields:
+                    compiled_user_data = {}
+                    for field in user_data_fields:
+                        if field in cognito_user._data.keys():
+                            user_data = cognito_user._data.pop(field)
+                            compiled_user_data[field] = user_data
+                    user_data = get_user_data_model().objects.create(
+                        **compiled_user_data
+                    )
+
+                    self.Users.objects.create_user(
+                        username=cognito_user.username, password=None,
+                        user_data=user_data, **cognito_user._data
+                    )
+                else:
+                    self.Users.objects.create_user(
+                        username=cognito_user.username, password=None,
+                        **cognito_user._data
+                    )
 
     def auth_error_handler(self, exception, cognito_user):
         """

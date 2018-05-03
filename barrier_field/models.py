@@ -1,9 +1,11 @@
+from django.apps import apps
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 from barrier_field.client import cognito
 from barrier_field.utils import get_attr_map, \
-    get_custom_attrs_from_options
+    get_custom_attrs_from_options, get_user_data_model
 
 
 class User(AbstractUser):
@@ -12,6 +14,13 @@ class User(AbstractUser):
     cognito
     """
     phone_number = models.CharField(max_length=50, blank=True)
+
+    user_data_model = getattr(settings, 'USER_DATA_MODEL', False)
+    if user_data_model:
+        user_data = models.ForeignKey(
+            user_data_model, on_delete=models.CASCADE,
+            blank=True, null=True
+        )
 
     def save(self, update_cognito=True, *args, **kwargs):
         if self.username[0:13] == '__temporary__':
@@ -35,6 +44,11 @@ class User(AbstractUser):
             # Do something about disabling the user in cognito here
             pass
         cognito.username = cognito_data.pop('username')
+
+        # If user data model exists, remove foreign key from data
+        if get_user_data_model():
+            cognito_data.pop('user_data_id')
+
         cognito_data.update(**get_custom_attrs_from_options(cognito_data))
         cognito.admin_update_profile(
             cognito_data, attr_map=get_attr_map()

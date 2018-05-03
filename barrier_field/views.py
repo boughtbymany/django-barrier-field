@@ -131,7 +131,7 @@ class ForceChangePassword(FormView):
 
 class ChangePassword(FormView):
     form_class = forms.PasswordChangeForm
-    template_name = 'update_cognito_password.html'
+    template_name = 'change_cognito_password.html'
 
     def form_valid(self, form):
         current_password = form.cleaned_data['current_password']

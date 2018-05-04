@@ -72,7 +72,7 @@ class PasswordUpdateForm(forms.Form):
         return password2
 
 
-class PasswordChangeForm(forms.Form):
+class PasswordChangeForm(PasswordUpdateForm):
     current_password = forms.CharField(
         required=True,
         label='Current password',
@@ -85,44 +85,6 @@ class PasswordChangeForm(forms.Form):
             }
         )
     )
-
-    new_password1 = forms.CharField(
-        required=True,
-        label='New password',
-        widget=forms.PasswordInput(
-            render_value=False,
-            attrs={
-                'name': 'new_password1',
-                'placeholder': 'New password',
-                'class': 'form__text'
-            }
-        )
-    )
-
-    new_password2 = forms.CharField(
-        required=True,
-        label='Confirm new password',
-        widget=forms.PasswordInput(
-            render_value=False,
-            attrs={
-                'name': 'new_password2',
-                'placeholder': 'Confirm new password',
-                'class': 'form__text'
-            }
-        ),
-        help_text=('Enter the same password as above, for verification.')
-    )
-
-    def clean_password2(self):
-        password1 = self.cleaned_data.get('new_password1')
-        password2 = self.cleaned_data.get('new_password2')
-
-        if (password1 and password2) and password1 != password2:
-            raise forms.ValidationError(
-                "The two password fields didn't match."
-            )
-
-        return password2
 
 
 class UserCreateForm(UserCreationForm):
@@ -152,3 +114,34 @@ class MFACode(forms.Form):
 class MFASettings(forms.Form):
     software_mfa = forms.BooleanField(required=False)
     sms_mfa = forms.BooleanField(required=False)
+
+
+class ForgotPassword(forms.Form):
+    email_address = forms.CharField(max_length=255, required=True)
+
+
+class ForgotPasswordConfirm(PasswordUpdateForm):
+    email_address = forms.CharField(
+        required=True,
+        label='Email Address',
+        widget=forms.TextInput(
+            attrs={
+                'name': 'email_address',
+                'placeholder': 'Email Address',
+                'class': 'form__text'
+            }
+        )
+    )
+
+    verification_code = forms.CharField(
+        required=True,
+        label='Verification code',
+        widget=forms.PasswordInput(
+            render_value=False,
+            attrs={
+                'name': 'verification_code',
+                'placeholder': 'Verification Code',
+                'class': 'form__text'
+            }
+        )
+    )

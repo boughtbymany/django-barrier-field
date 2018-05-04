@@ -10,7 +10,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
-from django.views.generic import FormView
+from django.views.generic import FormView, TemplateView
 from warrant.exceptions import ForceChangePasswordException
 
 from barrier_field import forms
@@ -265,3 +265,30 @@ class MFASettings(FormView):
             cognito.update_software_mfa(self.request, enabled=False)
 
         return redirect(reverse('mfa-settings'))
+
+
+class ForgotPassword(FormView):
+    form_class = forms.ForgotPassword
+    template_name = 'forgot_password.html'
+
+    def form_valid(self, form):
+        email_address = form.cleaned_data['email_address']
+        cognito.username = email_address
+        cognito.initiate_forgot_password()
+        return redirect(reverse('forgot-password-sent'))
+
+
+class ForgotPasswordSent(TemplateView):
+    template_name = 'forgot_password_sent.html'
+
+
+class ForgotPasswordConfirm(FormView):
+    template_name = 'forgot_password_confirm.html'
+    form_class = forms.ForgotPasswordConfirm
+
+    def form_valid(self, form):
+        email_address = form.cleaned_data['email_address']
+        verification_code = form.cleaned_data['verification_code']
+        new_password = form.cleaned_data['password2']
+
+

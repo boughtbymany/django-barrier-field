@@ -49,7 +49,7 @@ class CognitoAuth:
             try:
                 cognito_user.authenticate(password, request)
             except Exception as e:
-                resp = self.auth_error_handler(e, cognito_user)
+                resp = cognito.auth_error_handler(e)
                 return resp
         else:
             # Validate authentication
@@ -135,29 +135,6 @@ class CognitoAuth:
                         username=cognito_user.username, password=None,
                         **cognito_user._data
                     )
-
-    def auth_error_handler(self, exception, cognito_user):
-        """
-        Handle generic botocore 'errorfactory' errors
-        """
-        if not getattr(exception, 'response', False):
-            raise exception
-        error = exception.response.get('Error')
-        if error:
-            if error['Code'] == 'NotAuthorizedException':
-                # Handle disabled user
-                if error['Message'] == 'User is disabled':
-                    self.sync_cache(
-                        {'username': cognito_user.username}, deactivate=True
-                    )
-                    return None
-                if error['Message'] == 'Incorrect username or password.':
-                    return None
-            if error['Code'] == 'UserNotFoundException':
-                return None
-            raise exception
-        else:
-            raise exception
 
     def update_session(self, request):
         """

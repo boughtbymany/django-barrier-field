@@ -10,13 +10,14 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
-from django.views.generic import FormView
+from django.views.generic import FormView, TemplateView
 from warrant.exceptions import ForceChangePasswordException
 
 from barrier_field import forms
 from barrier_field.backend import register, complete_login
 from barrier_field.client import cognito
-from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware
+from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
+    MFAMismatch
 
 
 class CognitoLogIn(LoginView):
@@ -183,12 +184,22 @@ class SoftwareMFA(FormView):
 
     def form_valid(self, form):
         code = form.cleaned_data['mfa_code']
-        response = cognito.respond_to_auth_challenge(
-            'SOFTWARE_TOKEN_MFA', code, cognito.username,
-            self.request.session.pop('MFA_CHALLENGE').get('Session')
-        )
+        try:
+            response = cognito.respond_to_auth_challenge(
+                'SOFTWARE_TOKEN_MFA', code, cognito.username,
+                self.request.session.get('MFA_CHALLENGE').get('Session')
+            )
+        except Exception as e:
+            try:
+                cognito.auth_error_handler(e)
+            except MFAMismatch:
+                form.add_error(
+                    field='mfa_code', error='Incorrect one time passwod'
+                )
+                return super(SoftwareMFA, self).form_invalid(form)
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
             complete_login(self.request, response)
+        self.request.session.get('MFA_CHALLENGE').get('Session')
         return redirect(getattr(settings, 'LOGIN_REDIRECT_URL', '/'))
 
 
@@ -265,3 +276,36 @@ class MFASettings(FormView):
             cognito.update_software_mfa(self.request, enabled=False)
 
         return redirect(reverse('mfa-settings'))
+
+
+class ForgotPassword(FormView):
+    form_class = forms.ForgotPassword
+    template_name = 'forgot_password.html'
+
+    def form_valid(self, form):
+        email_address = form.cleaned_data['email_address']
+        cognito.username = email_address
+        cognito.initiate_forgot_password()
+        return redirect(reverse('forgot-password-sent'))
+
+
+class ForgotPasswordSent(TemplateView):
+    template_name = 'forgot_password_sent.html'
+
+
+class ForgotPasswordConfirm(FormView):
+    template_name = 'forgot_password_confirm.html'
+    form_class = forms.ForgotPasswordConfirm
+
+    def form_valid(self, form):
+        email_address = form.cleaned_data['email_address']
+        verification_code = form.cleaned_data['verification_code']
+        new_password = form.cleaned_data['password2']
+
+        cognito.username = email_address
+        response = cognito.confirm_forgot_password(
+            verification_code, new_password
+        )
+        return redirect(reverse('cognito-login'))
+
+

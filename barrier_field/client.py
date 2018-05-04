@@ -2,7 +2,8 @@ from django.conf import settings
 from types import MethodType
 from warrant import Cognito, AWSSRP
 
-from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware
+from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
+    MFAMismatch
 
 cognito = Cognito(
     settings.COGNITO_USER_POOL_ID,
@@ -10,6 +11,32 @@ cognito = Cognito(
     access_key=getattr(settings, 'AWS_ACCESS_KEY_ID', None),
     secret_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None)
 )
+
+
+def auth_error_handler(self, exception):
+    """
+    Handle generic botocore 'errorfactory' errors
+    """
+    if not getattr(exception, 'response', False):
+        raise exception
+    error = exception.response.get('Error')
+    if error:
+        if error['Code'] == 'NotAuthorizedException':
+            # Handle disabled user
+            if error['Message'] == 'User is disabled':
+                self.sync_cache(
+                    {'username': cognito.username}, deactivate=True
+                )
+                return None
+            if error['Message'] == 'Incorrect username or password.':
+                return None
+        if error['Code'] == 'UserNotFoundException':
+            return None
+        if error['Code'] == 'CodeMismatchException':
+            raise MFAMismatch()
+        raise exception
+    else:
+        raise exception
 
 
 def register_method(method):
@@ -126,6 +153,7 @@ def get_user_detailed(self):
     return user
 
 
+register_method(auth_error_handler)
 register_method(authenticate)
 register_method(admin_disable_user)
 register_method(admin_enable_user)

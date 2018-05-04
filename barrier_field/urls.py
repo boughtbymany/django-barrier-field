@@ -52,4 +52,20 @@ urlpatterns = [
         name='change-password'
     ),
 
+    # FORGOT PASSWORD
+    path(
+        'forgot-password/',
+        views.ForgotPassword.as_view(),
+        name='forgot-password'
+    ),
+    path(
+        'forgot-password-sent/',
+        views.ForgotPasswordSent.as_view(),
+        name='forgot-password-sent'
+    ),
+    path(
+        'forgot-password-confirm/',
+        views.ForgotPasswordConfirm.as_view(),
+        name='forgot-password-confirm'
+    ),
 ]

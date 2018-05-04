@@ -73,6 +73,7 @@ class PasswordUpdateForm(forms.Form):
 
 
 class PasswordChangeForm(PasswordUpdateForm):
+    field_order = ['current_password', 'password1', 'password2']
     current_password = forms.CharField(
         required=True,
         label='Current password',
@@ -100,6 +101,7 @@ class UserUpdateform(UserChangeForm):
 class MFACode(forms.Form):
     mfa_code = forms.CharField(
         required=True,
+        min_length=6,
         label='One Time Password',
         widget=forms.TextInput(
             attrs={
@@ -121,6 +123,9 @@ class ForgotPassword(forms.Form):
 
 
 class ForgotPasswordConfirm(PasswordUpdateForm):
+    field_order = [
+        'email_address', 'verification_code', 'password1', 'password2'
+    ]
     email_address = forms.CharField(
         required=True,
         label='Email Address',

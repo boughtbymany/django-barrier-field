@@ -3,7 +3,7 @@ from types import MethodType
 from warrant import Cognito, AWSSRP
 
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
-    MFAMismatch
+    MFAMismatch, CognitoInvalidPassword
 
 cognito = Cognito(
     settings.COGNITO_USER_POOL_ID,
@@ -34,6 +34,8 @@ def auth_error_handler(self, exception):
             return None
         if error['Code'] == 'CodeMismatchException':
             raise MFAMismatch()
+        if error['Code'] == 'InvalidPasswordException':
+            raise CognitoInvalidPassword()
         raise exception
     else:
         raise exception

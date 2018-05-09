@@ -25,6 +25,10 @@ class MFAMismatch(Exception):
     pass
 
 
+class CognitoInvalidPassword(Exception):
+    pass
+
+
 catch_login_exceptions = (
     MFARequiredSMS, MFARequiredSoftware, ForceChangePasswordException
 )

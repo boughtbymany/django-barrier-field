@@ -92,6 +92,7 @@ class Command(BaseCommand):
         # Update user with optional and custom attributes
         cognito.username = username
         base_attributes.update(custom_attributes)
+        base_attributes['access_key'] = 'None'
         cognito.admin_update_profile(
             base_attributes, attr_map=get_attr_map()
         )

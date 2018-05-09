@@ -85,7 +85,7 @@ from django.db import models
 class UserDetails(models.Model):
     name = models.CharField(max_length=255, blank=True)
     locale = models.CharField(max_length=255, blank=True)
-    gender = modelsCharField(max_lenght=10, blank=True)
+    gender = modelsCharField(max_length=10, blank=True)
 
 ```
 
@@ -102,7 +102,8 @@ USER_DATA_MODEL = 'some_app.UserDetails'
 
 Cognito allows you to store custom attributes for the users in your pool. To fully sync with Django, attributes for "is_superuser" and "is_staff" must be created.
 
-> ADD IMAGE OF COGNITO SETUP HERE
+![alt text](./barrier_field/docs/images/required_attributes.png)
+
 
 Should you add any more custom attributes to your Cognito users, to sync that data with Django you will need to specify the name and type of the attributes in your app settings.
 
@@ -116,9 +117,11 @@ CUSTOM_ATTRS = {
 }
 ```
 
-Cognito doesn't have native support for booleans, so instead it's advised you set the type to integer, with a min value of 0 and a max value of 1. When a custom attribute has type "bool", Barrier Field will translate that value to a integer for cognito.
+Cognito doesn't have native support for booleans, so instead it's advised you set the type to integer, with a min value of 0 and a max value of 1. When a custom attribute has type "bool", Barrier Field will translate that value to a integer for cognito. See the superuser/staff setup above for an example.
 
-> ADD IMAGE OF COGNITO BOOLEAN HERE
+### Required attributes
+
+Define whether an attribute is required. This is used in conjunction with the [create user manage command](#create_user)
 
 ### User database
 
@@ -130,4 +133,37 @@ You can chose to clear that data  every time the user logs out by adding the fol
 CLEAR_USER_ON_LOGOUT = True
 ```
 
+## Manage commands
 
+Barrier field comes with commands to:
+
+* Create users
+* List users
+* Delete users
+
+### Create user
+
+The create user command pulls information from [custom attributes](), [standard attributes]() and [required attributes](). 
+
+```python
+python manage.py create_cognito_user some@address.com <required_attribute>
+-- telephone <Telephone number>
+-- temporary_password <Temporary password>
+-- <custom_attribute>
+```
+
+### Delete user
+
+Delete a user from Cognito. _Warning: This is permanent!_
+
+```python
+python manage.py delete_cognito_user some@address.com
+```
+
+### List users
+
+Return a list of all Cognito user and their attributes
+
+```python
+python manage.py list_cognito_users
+```

@@ -11,7 +11,7 @@ Barrier field supports the following:
 * Temporary passwords and forced password changes
 * Enabling and disabling users
 * Synchronisation with Django
-* Multi-factory authentication (MFA) via Software or SMS
+* Multi-factor authentication (MFA) via Software or SMS
 * Custom attributes
 * Required attributes
 * Forgotten passwords
@@ -42,7 +42,7 @@ AWS_ACCESS_KEY_ID = '<AWS ACCESS KEY>'
 AWS_SECRET_ACCESS_KEY = '<AWS SECRET KEY>'
 ```
 
-Specify your cognito user pool details like so:
+Specify your Cognito user pool details like so:
 
 ```python
 COGNITO_USER_POOL_ID = '<COGNITO USER POOL ID>'
@@ -51,7 +51,7 @@ COGNITO_APP_ID = '<COGNITO CLIENT APP ID>'
 
 ### Set authentication backend
 
-Add barrier field cognito auth to authentication backends.
+Add barrier field Cognito auth to authentication backends.
 
 ```python
 AUTHENTICATION_BACKENDS = [
@@ -96,7 +96,16 @@ USER_DATA_MODEL = 'some_app.UserDetails'
 
 ### Standard attributes
 
-"Standard attributes" refers to the built in attributes supplied with Cognito.
+"Standard attributes" refers to the built in attributes supplied with Cognito. Standard attributes can be specified if the settings so they appear when using Barrier Field's [manage commands](#create_user).
+
+These attributes take the form of a map between the local name and Cognito's name. The `name` should be Cognito's name for the field, and the `value` should be the local name. The example below shows Barrier Field's default.
+
+```python
+STANDARD_ATTRS = {
+    'given_name': 'first_name',
+    'family_name': 'last_name',
+}
+```
 
 ### Custom attributes
 
@@ -117,7 +126,7 @@ CUSTOM_ATTRS = {
 }
 ```
 
-Cognito doesn't have native support for booleans, so instead it's advised you set the type to integer, with a min value of 0 and a max value of 1. When a custom attribute has type "bool", Barrier Field will translate that value to a integer for cognito. See the superuser/staff setup above for an example.
+Cognito doesn't have native support for booleans, so instead it's advised you set the type to integer, with a min value of 0 and a max value of 1. When a custom attribute has type "bool", Barrier Field will translate that value to a integer for Cognito. See the superuser/staff setup above for an example.
 
 ### Required attributes
 
@@ -145,7 +154,7 @@ Barrier field comes with commands to:
 
 The create user command pulls information from [custom attributes](), [standard attributes]() and [required attributes](). 
 
-```python
+```
 python manage.py create_cognito_user some@address.com <required_attribute>
 -- telephone <Telephone number>
 -- temporary_password <Temporary password>
@@ -156,7 +165,7 @@ python manage.py create_cognito_user some@address.com <required_attribute>
 
 Delete a user from Cognito. _Warning: This is permanent!_
 
-```python
+```
 python manage.py delete_cognito_user some@address.com
 ```
 
@@ -164,6 +173,6 @@ python manage.py delete_cognito_user some@address.com
 
 Return a list of all Cognito user and their attributes
 
-```python
+```
 python manage.py list_cognito_users
 ```

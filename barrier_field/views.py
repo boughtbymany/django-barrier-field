@@ -122,7 +122,11 @@ class ForceChangePassword(FormView):
             except CognitoInvalidPassword:
                 error = e.response.get('Error')
                 form.add_error(field='password1', error=error['Message'])
-                return super(ForceChangePassword, self).form_invalid(form)
+            else:
+                form.add_error(
+                    error=f'Code: {error["Code"]} - Message: {error["Message"]}'
+                )
+            return super(ForceChangePassword, self).form_invalid(form)
         else:
             # Remove login data from session
             self.request.session.pop('login_data')

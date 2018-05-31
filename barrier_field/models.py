@@ -5,7 +5,7 @@ from django.contrib.auth.models import AbstractUser
 
 from barrier_field.client import cognito
 from barrier_field.utils import get_attr_map, \
-    get_custom_attrs_from_options, get_user_data_model
+    get_custom_attrs_from_options, get_user_data_model, is_enabled
 
 
 class User(AbstractUser):
@@ -23,7 +23,7 @@ class User(AbstractUser):
         )
 
     def save(self, update_cognito=True, *args, **kwargs):
-        if update_cognito:
+        if update_cognito and is_enabled():
             self.sync_cognito()
         return super(User, self).save(*args, **kwargs)
 

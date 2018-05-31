@@ -6,6 +6,15 @@ from django.apps import apps
 from django.conf import settings
 
 
+def is_enabled():
+    cognito_auth = getattr(settings, 'BARRIER_FIELD_ENABLED', None)
+    if cognito_auth is not None and cognito_auth is False:
+        return False
+    if not settings.AWS_ACCESS_KEY_ID or not settings.AWS_SECRET_ACCESS_KEY:
+        return False
+    return True
+
+
 def get_custom_attrs():
     """
     Returns either the default custom attribute definitions, or fetches

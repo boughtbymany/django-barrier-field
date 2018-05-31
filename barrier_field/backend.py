@@ -5,7 +5,7 @@ from warrant import Cognito
 
 from barrier_field.client import cognito
 from barrier_field.utils import get_attr_map, get_user_data_model_fields, \
-    get_user_data_model
+    get_user_data_model, is_enabled
 
 
 def register(request, new_user):
@@ -41,6 +41,9 @@ class CognitoAuth:
         :return:
         """
         cognito_user = cognito
+
+        if not is_enabled():
+            return None
 
         if not cognito_auth:
             # New user session authentication

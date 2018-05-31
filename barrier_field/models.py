@@ -23,8 +23,6 @@ class User(AbstractUser):
         )
 
     def save(self, update_cognito=True, *args, **kwargs):
-        if self.username[0:13] == '__temporary__':
-            update_cognito = False
         if update_cognito and is_enabled():
             self.sync_cognito()
         return super(User, self).save(*args, **kwargs)

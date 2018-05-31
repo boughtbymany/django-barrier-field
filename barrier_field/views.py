@@ -3,6 +3,7 @@ from uuid import uuid4
 import qrcode
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.contrib.auth.views import LoginView, LogoutView
 from django.http import HttpResponseRedirect
@@ -17,7 +18,7 @@ from barrier_field import forms
 from barrier_field.backend import register, complete_login
 from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
-    MFAMismatch
+    MFAMismatch, CognitoInvalidPassword
 
 
 class CognitoLogIn(LoginView):
@@ -111,15 +112,21 @@ class ForceChangePassword(FormView):
         current_password = login_form_data.get('password')
         new_password = form.cleaned_data['password1']
         try:
+            # Username can drop off cognito session, if it does, add it back on
+            if not cognito.username:
+                cognito.username = login_form_data.get('username')
             cognito.new_password_challenge(current_password, new_password)
         except Exception as e:
             try:
-                error = e.response['Error']
-            except AttributeError:
-                raise AttributeError('Something went wrong there...')
-            if error['Code'] == 'InvalidPasswordException':
+                cognito.auth_error_handler(e)
+            except CognitoInvalidPassword:
+                error = e.response.get('Error')
                 form.add_error(field='password1', error=error['Message'])
-                return super(ForceChangePassword, self).form_invalid(form)
+            else:
+                form.add_error(
+                    error=f'Code: {error["Code"]} - Message: {error["Message"]}'
+                )
+            return super(ForceChangePassword, self).form_invalid(form)
         else:
             # Remove login data from session
             self.request.session.pop('login_data')
@@ -211,7 +218,8 @@ class SetSoftwareMFA(FormView):
         context = super(SetSoftwareMFA, self).get_context_data(**kwargs)
         response = cognito.associate_software_token(self.request)
         secret_code = response['SecretCode']
-        OTP = f'otpauth://totp/Username:{self.request.user.username}?secret={secret_code}&issuer=BoughtByMany'  # noqa: E501
+        OTP = f'otpauth://totp/Username:{self.request.user.username}' \
+              f'?secret={secret_code}&issuer=BoughtByMany'
         qr_code = qrcode.make(OTP)
         save_location = f'static/temp/code-{uuid4()}.png'
         self.request.session['qr_code_loc'] = save_location
@@ -230,7 +238,9 @@ class SetSoftwareMFA(FormView):
         response = cognito.verify_software_token(self.request, code)
         if response['Status'] == 'SUCCESS':
             cognito.update_software_mfa(self.request, enabled=True)
-        return redirect('/')
+
+        messages.success(self.request, 'Software MFA Activated')
+        return redirect(reverse('mfa-settings'))
 
 
 class MFASettings(FormView):
@@ -263,8 +273,10 @@ class MFASettings(FormView):
         )
         if sms[0] and not sms[1]:
             cognito.update_sms_mfa(self.request, enabled=True)
+            messages.success(self.request, 'SMS MFA Activated')
         if sms[1] and not sms[0]:
             cognito.update_sms_mfa(self.request, enabled=False)
+            messages.success(self.request, 'SMS MFA Deactivated')
 
         software = (
             form.cleaned_data['software_mfa'],
@@ -274,6 +286,7 @@ class MFASettings(FormView):
             return redirect(reverse('associate-mfa'))
         if software[1] and not software[0]:
             cognito.update_software_mfa(self.request, enabled=False)
+            messages.success(self.request, 'Software MFA Deactivated')
 
         return redirect(reverse('mfa-settings'))
 

@@ -40,10 +40,14 @@ class User(AbstractUser):
             ]:
                 continue
             cognito_data[data] = user_data[data]
-        if not cognito_data.pop('is_active'):
-            # Do something about disabling the user in cognito here
-            pass
+
         cognito.username = cognito_data.pop('username')
+
+        # Enable/disable cognito user based on 'is_active'
+        if not cognito_data.pop('is_active'):
+            cognito.admin_disable_user()
+        else:
+            cognito.admin_enable_user()
 
         # If user data model exists, remove foreign key from data
         if get_user_data_model():

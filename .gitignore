@@ -58,3 +58,4 @@ __py
 venv/
 venv/.Python
 node_modules
+.vscode

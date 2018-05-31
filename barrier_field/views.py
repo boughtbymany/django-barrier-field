@@ -124,7 +124,7 @@ class ForceChangePassword(FormView):
                 form.add_error(field='password1', error=error['Message'])
             else:
                 form.add_error(
-                    error=f'Code: {error["Code"]} - Message: {error["Message"]}'
+                    error=f'Code: {e["Code"]} - Message: {e["Message"]}'
                 )
             return super(ForceChangePassword, self).form_invalid(form)
         else:

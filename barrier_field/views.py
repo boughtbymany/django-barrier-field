@@ -62,7 +62,7 @@ class CognitoLogOut(LogoutView):
 
 
 class Register(FormView):
-    template_name = 'register.html'
+    template_name = 'registration/register.html'
     form_class = forms.UserCreateForm
     success_url = '/'
 
@@ -87,7 +87,7 @@ class Register(FormView):
 
 
 class Update(FormView):
-    template_name = 'register.html'
+    template_name = 'registration/register.html'
     form_class = forms.UserUpdateform
     success_url = '/'
 
@@ -105,7 +105,7 @@ class Update(FormView):
 
 class ForceChangePassword(FormView):
     form_class = forms.PasswordUpdateForm
-    template_name = 'update_cognito_password.html'
+    template_name = 'barrier_field/update_cognito_password.html'
 
     def form_valid(self, form):
         login_form_data = self.request.session.get('login_data')
@@ -139,7 +139,7 @@ class ForceChangePassword(FormView):
 
 class ChangePassword(FormView):
     form_class = forms.PasswordChangeForm
-    template_name = 'change_cognito_password.html'
+    template_name = 'barrier_field/change_cognito_password.html'
 
     def form_valid(self, form):
         current_password = form.cleaned_data['current_password']
@@ -162,7 +162,7 @@ class ChangePassword(FormView):
 
 class SMSMFA(FormView):
     form_class = forms.MFACode
-    template_name = 'authenticate_mfa.html'
+    template_name = 'barrier_field/authenticate_mfa.html'
 
     def get_context_data(self, **kwargs):
         context = super(SMSMFA, self).get_context_data(**kwargs)
@@ -182,7 +182,7 @@ class SMSMFA(FormView):
 
 class SoftwareMFA(FormView):
     form_class = forms.MFACode
-    template_name = 'authenticate_mfa.html'
+    template_name = 'barrier_field/authenticate_mfa.html'
 
     def get_context_data(self, **kwargs):
         context = super(SoftwareMFA, self).get_context_data(**kwargs)
@@ -212,7 +212,7 @@ class SoftwareMFA(FormView):
 
 class SetSoftwareMFA(FormView):
     form_class = forms.MFACode
-    template_name = 'associate-software-mfa.html'
+    template_name = 'barrier_field/associate_software_mfa.html'
 
     def get_context_data(self, **kwargs):
         context = super(SetSoftwareMFA, self).get_context_data(**kwargs)
@@ -245,7 +245,7 @@ class SetSoftwareMFA(FormView):
 
 class MFASettings(FormView):
     form_class = forms.MFASettings
-    template_name = 'mfa-settings.html'
+    template_name = 'barrier_field/mfa_settings.html'
     sms_enabled = None
     software_enabled = None
 
@@ -293,7 +293,7 @@ class MFASettings(FormView):
 
 class ForgotPassword(FormView):
     form_class = forms.ForgotPassword
-    template_name = 'forgot_password.html'
+    template_name = 'barrier_field/forgot_password.html'
 
     def form_valid(self, form):
         email_address = form.cleaned_data['email_address']
@@ -303,11 +303,11 @@ class ForgotPassword(FormView):
 
 
 class ForgotPasswordSent(TemplateView):
-    template_name = 'forgot_password_sent.html'
+    template_name = 'barrier_field/forgot_password_sent.html'
 
 
 class ForgotPasswordConfirm(FormView):
-    template_name = 'forgot_password_confirm.html'
+    template_name = 'barrier_field/forgot_password_confirm.html'
     form_class = forms.ForgotPasswordConfirm
 
     def form_valid(self, form):
@@ -320,5 +320,3 @@ class ForgotPasswordConfirm(FormView):
             verification_code, new_password
         )
         return redirect(reverse('cognito-login'))
-
-

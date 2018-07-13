@@ -99,7 +99,7 @@ class Update(FormView):
             'is_staff': form.cleaned_data['is_staff']
         }
         user.objects.update_user(**update_user)
-        user.save(update_cognito=True)
+        user.save()
         return super(Update, self).form_valid(form)
 
 

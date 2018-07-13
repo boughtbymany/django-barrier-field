@@ -1,3 +1,4 @@
+import os
 import random
 import secrets
 import string
@@ -7,11 +8,12 @@ from django.conf import settings
 
 
 def is_enabled():
-    cognito_auth = getattr(settings, 'BARRIER_FIELD_ENABLED', None)
-    if cognito_auth is not None and cognito_auth is False:
+    cognito_auth = getattr(settings, 'BARRIER_FIELD_ENABLED', True)
+    if not cognito_auth:
         return False
     if not settings.AWS_ACCESS_KEY_ID or not settings.AWS_SECRET_ACCESS_KEY:
-        return False
+        if not os.getenv('AWS_DEFAULT_PROFILE'):
+            return False
     return True
 
 

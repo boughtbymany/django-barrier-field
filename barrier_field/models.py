@@ -2,10 +2,13 @@ from django.apps import apps
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 from barrier_field.client import cognito
 from barrier_field.utils import get_attr_map, \
-    get_custom_attrs_from_options, get_user_data_model, is_enabled
+    get_custom_attrs_from_options, get_user_data_model, is_enabled, \
+    get_user_data_model_fields
 
 
 class User(AbstractUser):
@@ -22,12 +25,7 @@ class User(AbstractUser):
             blank=True, null=True
         )
 
-    def save(self, update_cognito=True, *args, **kwargs):
-        if update_cognito and is_enabled():
-            self.sync_cognito()
-        return super(User, self).save(*args, **kwargs)
-
-    def sync_cognito(self):
+    def sync_cognito(self, include_custom=False):
         user_data = self.__dict__
         cognito_data = {}
         for data in user_data.keys():
@@ -49,9 +47,37 @@ class User(AbstractUser):
 
         # If user data model exists, remove foreign key from data
         if get_user_data_model():
+            if include_custom:
+                user_data_fields = self.sync_custom_data()
+                cognito_data.update(user_data_fields)
             cognito_data.pop('user_data_id')
 
         cognito_data.update(**get_custom_attrs_from_options(cognito_data))
         cognito.admin_update_profile(
             cognito_data, attr_map=get_attr_map()
         )
+
+    def sync_custom_data(self):
+        data_model_fields = get_user_data_model_fields()
+        additional_data = {}
+        for field in data_model_fields:
+            if field == 'id':
+                continue
+            field_value = getattr(self.user_data, field, False)
+            if field_value:
+                additional_data[field] = field_value
+        return additional_data
+
+
+@receiver(post_save)
+def post_save_sync(sender, **kwargs):
+    """
+    Save data after user/user data model is saved
+    """
+    if is_enabled():
+        if sender == get_user_data_model():
+            User.objects.get(user_data__pk=kwargs['instance'].pk).sync_cognito(
+                include_custom=True
+            )
+        if sender == User:
+            User.objects.get(pk=kwargs['instance'].pk).sync_cognito()

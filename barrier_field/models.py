@@ -1,5 +1,5 @@
-from django.apps import apps
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
@@ -76,8 +76,13 @@ def post_save_sync(sender, **kwargs):
     """
     if is_enabled():
         if sender == get_user_data_model():
-            User.objects.get(user_data__pk=kwargs['instance'].pk).sync_cognito(
-                include_custom=True
-            )
+            try:
+                User.objects.get(
+                    user_data__pk=kwargs['instance'].pk
+                ).sync_cognito(include_custom=True)
+            except ObjectDoesNotExist:
+                # User data created first, so for new users
+                # this will not exist yet
+                pass
         if sender == User:
             User.objects.get(pk=kwargs['instance'].pk).sync_cognito()

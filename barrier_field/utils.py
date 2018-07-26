@@ -9,7 +9,7 @@ from swapper import get_model_name, load_model
 
 
 def is_enabled():
-    cognito_auth = getattr(settings, 'BARRIER_FIELD_ENABLED', True)
+    cognito_auth = getattr(settings, 'BARRIER_FIELD_ACTIVATED', True)
     if not cognito_auth:
         return False
     if not settings.AWS_ACCESS_KEY_ID or not settings.AWS_SECRET_ACCESS_KEY:

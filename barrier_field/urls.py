@@ -19,7 +19,6 @@ from django.urls import path
 from barrier_field import views
 
 urlpatterns = [
-    path('testing/', views.testing, name='testing'),
     path('register/', views.Register.as_view(), name='register'),
     path('update/', views.Update.as_view(), name='update'),
     path('login/', views.CognitoLogIn.as_view(), name='cognito-login'),

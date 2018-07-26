@@ -3,9 +3,8 @@ import random
 import secrets
 import string
 
-from django.apps import apps
 from django.conf import settings
-from swapper import get_model_name, load_model
+from swapper import load_model
 
 
 def is_enabled():

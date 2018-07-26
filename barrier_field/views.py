@@ -1,13 +1,12 @@
 import os
 from uuid import uuid4
 import qrcode
-import swapper
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.views import LoginView, LogoutView
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.decorators import method_decorator
@@ -21,9 +20,6 @@ from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
     MFAMismatch, CognitoInvalidPassword
 from barrier_field.utils import get_user_model
-
-def testing(request):
-    return HttpResponse('')
 
 
 class CognitoLogIn(LoginView):

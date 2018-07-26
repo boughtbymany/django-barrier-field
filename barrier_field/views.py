@@ -1,12 +1,13 @@
 import os
 from uuid import uuid4
 import qrcode
+import swapper
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model, authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.views import LoginView, LogoutView
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.decorators import method_decorator
@@ -19,6 +20,10 @@ from barrier_field.backend import register, complete_login
 from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
     MFAMismatch, CognitoInvalidPassword
+from barrier_field.utils import get_user_model
+
+def testing(request):
+    return HttpResponse('')
 
 
 class CognitoLogIn(LoginView):
@@ -51,7 +56,8 @@ class CognitoLogOut(LogoutView):
         logout(request)
 
         if getattr(settings, 'CLEAR_USER_ON_LOGOUT', False):
-            db_user = get_user_model().objects.get(username=username)
+            user_model = get_user_model()
+            db_user = user_model.objects.get(username=username)
             db_user.delete()
 
         next_page = self.get_next_page()
@@ -67,7 +73,7 @@ class Register(FormView):
     success_url = '/'
 
     def form_valid(self, form):
-        User = get_user_model()
+        user_model = get_user_model()
         create_user = {
             'username': form.cleaned_data['username'],
             'password': form.cleaned_data['password1'],
@@ -77,7 +83,7 @@ class Register(FormView):
 
         # Register with cognito
         register(self.request, create_user)
-        User.objects.create_user(**create_user)
+        user_model.objects.create_user(**create_user)
         new_user = authenticate(
             username=create_user['username'],
             password=create_user['password']
@@ -92,8 +98,8 @@ class Update(FormView):
     success_url = '/'
 
     def form_valid(self, form):
-        User_model = get_user_model()
-        user = User_model.objects.get(username=form.cleaned_data['username'])
+        user_model = get_user_model()
+        user = user_model.objects.get(username=form.cleaned_data['username'])
         update_user = {
             'is_superuser': form.cleaned_data['is_superuser'],
             'is_staff': form.cleaned_data['is_staff']

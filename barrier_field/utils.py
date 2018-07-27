@@ -11,7 +11,9 @@ def is_enabled():
     cognito_auth = getattr(settings, 'BARRIER_FIELD_ACTIVATED', True)
     if not cognito_auth:
         return False
-    if not settings.AWS_ACCESS_KEY_ID or not settings.AWS_SECRET_ACCESS_KEY:
+    aws_access_key = getattr(settings, 'AWS_ACCESS_KEY_ID')
+    aws_secret_key = getattr(settings, 'AWS_SECRET_ACCESS_KEY')
+    if not aws_access_key or not aws_secret_key:
         if not os.getenv('AWS_DEFAULT_PROFILE'):
             return False
     return True

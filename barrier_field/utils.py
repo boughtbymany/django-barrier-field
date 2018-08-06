@@ -3,15 +3,17 @@ import random
 import secrets
 import string
 
-from django.apps import apps
 from django.conf import settings
+from swapper import load_model
 
 
 def is_enabled():
-    cognito_auth = getattr(settings, 'BARRIER_FIELD_ENABLED', True)
+    cognito_auth = getattr(settings, 'BARRIER_FIELD_ACTIVATED', True)
     if not cognito_auth:
         return False
-    if not settings.AWS_ACCESS_KEY_ID or not settings.AWS_SECRET_ACCESS_KEY:
+    aws_access_key = getattr(settings, 'AWS_ACCESS_KEY_ID')
+    aws_secret_key = getattr(settings, 'AWS_SECRET_ACCESS_KEY')
+    if not aws_access_key or not aws_secret_key:
         if not os.getenv('AWS_DEFAULT_PROFILE'):
             return False
     return True
@@ -130,18 +132,20 @@ def generate_temporary_password():
     return "".join(password)
 
 
+def get_user_model():
+    """
+    Return main barrier field user model
+    """
+    return load_model('barrier_field', 'User')
+
+
 def get_user_data_model():
     """
-    If a user data model has been specified in the settings, return the model.
-    Otherwise return False
+    Return swappable model for user data
     """
-    data_model_location =  getattr(settings, 'USER_DATA_MODEL', False)
-    if data_model_location:
-        return apps.get_model(
-            data_model_location, require_ready=False
-        )
-    else:
-        return False
+    user_data_model = settings.BARRIER_FIELD_USERDATA_MODEL
+    user_data_model_name = user_data_model.split('.')[-1]
+    return load_model('barrier_field', user_data_model_name)
 
 
 def get_user_data_model_fields():

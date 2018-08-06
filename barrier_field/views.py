@@ -4,7 +4,7 @@ import qrcode
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model, authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.views import LoginView, LogoutView
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
@@ -19,6 +19,7 @@ from barrier_field.backend import register, complete_login
 from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
     MFAMismatch, CognitoInvalidPassword
+from barrier_field.utils import get_user_model
 
 
 class CognitoLogIn(LoginView):
@@ -51,7 +52,8 @@ class CognitoLogOut(LogoutView):
         logout(request)
 
         if getattr(settings, 'CLEAR_USER_ON_LOGOUT', False):
-            db_user = get_user_model().objects.get(username=username)
+            user_model = get_user_model()
+            db_user = user_model.objects.get(username=username)
             db_user.delete()
 
         next_page = self.get_next_page()
@@ -67,7 +69,7 @@ class Register(FormView):
     success_url = '/'
 
     def form_valid(self, form):
-        User = get_user_model()
+        user_model = get_user_model()
         create_user = {
             'username': form.cleaned_data['username'],
             'password': form.cleaned_data['password1'],
@@ -77,7 +79,7 @@ class Register(FormView):
 
         # Register with cognito
         register(self.request, create_user)
-        User.objects.create_user(**create_user)
+        user_model.objects.create_user(**create_user)
         new_user = authenticate(
             username=create_user['username'],
             password=create_user['password']
@@ -92,8 +94,8 @@ class Update(FormView):
     success_url = '/'
 
     def form_valid(self, form):
-        User_model = get_user_model()
-        user = User_model.objects.get(username=form.cleaned_data['username'])
+        user_model = get_user_model()
+        user = user_model.objects.get(username=form.cleaned_data['username'])
         update_user = {
             'is_superuser': form.cleaned_data['is_superuser'],
             'is_staff': form.cleaned_data['is_staff']
@@ -124,7 +126,8 @@ class ForceChangePassword(FormView):
                 form.add_error(field='password1', error=error['Message'])
             else:
                 form.add_error(
-                    error=f'Code: {e["Code"]} - Message: {e["Message"]}'
+                    error=f'Code: {e["Code"]} - Message: {e["Message"]}',
+                    field='password1'
                 )
             return super(ForceChangePassword, self).form_invalid(form)
         else:
@@ -316,7 +319,13 @@ class ForgotPasswordConfirm(FormView):
         new_password = form.cleaned_data['password2']
 
         cognito.username = email_address
-        response = cognito.confirm_forgot_password(
-            verification_code, new_password
-        )
+        try:
+            response = cognito.confirm_forgot_password(
+                verification_code, new_password
+            )
+        except Exception as ex:
+            form.add_error(
+                field='verification_code',
+                error=f'Something went wrong: {ex} ->  Resp: {response}'
+            )
         return redirect(reverse('cognito-login'))

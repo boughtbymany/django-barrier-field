@@ -1,11 +1,10 @@
-from django.apps import apps
 from django.conf import settings
-from django.contrib.auth import get_user_model, authenticate, login
+from django.contrib.auth import authenticate, login
 from warrant import Cognito
 
 from barrier_field.client import cognito
 from barrier_field.utils import get_attr_map, get_user_data_model_fields, \
-    get_user_data_model, is_enabled
+    get_user_data_model, is_enabled, get_user_model
 
 
 def register(request, new_user):

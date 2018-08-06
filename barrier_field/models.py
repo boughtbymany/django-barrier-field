@@ -1,9 +1,10 @@
-from django.apps import apps
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from swapper import swappable_setting, get_model_name
 
 from barrier_field.client import cognito
 from barrier_field.utils import get_attr_map, \
@@ -11,19 +12,28 @@ from barrier_field.utils import get_attr_map, \
     get_user_data_model_fields
 
 
+# BaseParent
+class BaseUserData(models.Model):
+    class Meta:
+        abstract = True
+
+
+# Child
 class User(AbstractUser):
     """
     Extend base django user to include phone number, which is required by
     cognito
     """
     phone_number = models.CharField(max_length=50, blank=True)
+    user_data_model = settings.BARRIER_FIELD_USERDATA_MODEL
+    user_data_model_name = user_data_model.split('.')[-1]
+    user_data = models.ForeignKey(
+        get_model_name('barrier_field', user_data_model_name),
+        on_delete=models.CASCADE
+    )
 
-    user_data_model = getattr(settings, 'USER_DATA_MODEL', False)
-    if user_data_model:
-        user_data = models.ForeignKey(
-            user_data_model, on_delete=models.CASCADE,
-            blank=True, null=True
-        )
+    class Meta:
+        swappable = swappable_setting('barrier_field', 'User')
 
     def sync_cognito(self, include_custom=False):
         user_data = self.__dict__
@@ -45,12 +55,11 @@ class User(AbstractUser):
         else:
             cognito.admin_enable_user()
 
-        # If user data model exists, remove foreign key from data
-        if get_user_data_model():
-            if include_custom:
-                user_data_fields = self.sync_custom_data()
-                cognito_data.update(user_data_fields)
-            cognito_data.pop('user_data_id')
+        # Sync custom data
+        user_data_fields = self.sync_custom_data()
+        cognito_data.update(user_data_fields)
+        # Remove foreign key id from user data model
+        cognito_data.pop('user_data_id')
 
         cognito_data.update(**get_custom_attrs_from_options(cognito_data))
         cognito.admin_update_profile(
@@ -76,8 +85,13 @@ def post_save_sync(sender, **kwargs):
     """
     if is_enabled():
         if sender == get_user_data_model():
-            User.objects.get(user_data__pk=kwargs['instance'].pk).sync_cognito(
-                include_custom=True
-            )
+            try:
+                User.objects.get(
+                    user_data__pk=kwargs['instance'].pk
+                ).sync_cognito(include_custom=True)
+            except ObjectDoesNotExist:
+                # User data created first, so for new users
+                # this will not exist yet
+                pass
         if sender == User:
             User.objects.get(pk=kwargs['instance'].pk).sync_cognito()

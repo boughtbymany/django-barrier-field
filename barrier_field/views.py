@@ -126,7 +126,8 @@ class ForceChangePassword(FormView):
                 form.add_error(field='password1', error=error['Message'])
             else:
                 form.add_error(
-                    error=f'Code: {e["Code"]} - Message: {e["Message"]}'
+                    error=f'Code: {e["Code"]} - Message: {e["Message"]}',
+                    field='password1'
                 )
             return super(ForceChangePassword, self).form_invalid(form)
         else:
@@ -318,7 +319,13 @@ class ForgotPasswordConfirm(FormView):
         new_password = form.cleaned_data['password2']
 
         cognito.username = email_address
-        response = cognito.confirm_forgot_password(
-            verification_code, new_password
-        )
+        try:
+            response = cognito.confirm_forgot_password(
+                verification_code, new_password
+            )
+        except Exception as ex:
+            form.add_error(
+                field='verification_code',
+                error=f'Something went wrong: {ex} ->  Resp: {response}'
+            )
         return redirect(reverse('cognito-login'))

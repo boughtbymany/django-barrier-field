@@ -2,6 +2,9 @@ import os
 import random
 import secrets
 import string
+from pathlib import Path
+from uuid import uuid4
+import qrcode
 
 from django.conf import settings
 from swapper import load_model
@@ -161,3 +164,20 @@ def get_user_data_model_fields():
         return data_model_fields
     else:
         return False
+
+
+def generate_and_save_qr_code(request, OTP):
+    # Make the QR code
+    qr_code = qrcode.make(OTP)
+
+    # Check save location
+    temp_path = Path(getattr(settings, 'QR_CODE_PATH', 'static/temp/QR'))
+    if not temp_path.exists():
+        # Create the path here
+        temp_path.mkdir(parents=True)
+
+    # Save QR code
+    save_location = f'{temp_path}/code-{uuid4()}.png'
+    request.session['qr_code_loc'] = save_location
+    qr_code.save(save_location)
+    return save_location

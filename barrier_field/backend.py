@@ -66,77 +66,9 @@ class CognitoAuth:
 
         self.update_session(request)
         user = cognito_user.get_user(self.cognito_mapping)
-        self.sync_cache(user)
+        cognito_user.sync_cache(user)
         cache_user = self.Users.objects.get(username=user.pk)
         return cache_user
-
-    def sync_cache(self, cognito_user, deactivate=False):
-        """
-        Check and update local user data, and sync with cognito data if needed
-        :param cognito_user:
-        :param deactivate: if True, is_active of local user will be set to
-        False. This will be run in the case of the cognito user being disabled.
-        :return:
-        """
-        if deactivate:
-            local_user = self.Users.objects.get(
-                username=cognito_user['username']
-            )
-            local_user.is_active = False
-            local_user.save()
-        else:
-            try:
-                local_user = self.Users.objects.get(username=cognito_user.pk)
-                if not local_user.is_active:
-                    # Reactive user
-                    local_user.is_active = True
-
-                cognito_data = cognito_user._data
-
-                user_data_fields = get_user_data_model_fields()
-                if user_data_fields:
-                    user_data_update = {}
-                    for field in [*cognito_data.keys()].copy():
-                        if field in user_data_fields:
-                            user_data_update[field] = cognito_data.pop(field)
-
-                    # Update user data
-                    user_data_object = get_user_data_model().objects.filter(
-                        pk=local_user.user_data_id
-                    )
-                    user_data_object.update(**user_data_update)
-
-                for field in cognito_data.keys():
-                    cognito_field_value = getattr(cognito_user, field)
-                    if isinstance(getattr(local_user, field), bool):
-                        cognito_field_value = bool(int(cognito_field_value))
-                    setattr(local_user, field, cognito_field_value)
-
-                local_user.save()
-            except self.Users.DoesNotExist:
-                # Create new cached user
-
-                # First check whether a custom data model exists
-                user_data_fields = get_user_data_model_fields()
-                if user_data_fields:
-                    compiled_user_data = {}
-                    for field in user_data_fields:
-                        if field in cognito_user._data.keys():
-                            user_data = cognito_user._data.pop(field)
-                            compiled_user_data[field] = user_data
-                    user_data = get_user_data_model().objects.create(
-                        **compiled_user_data
-                    )
-
-                    self.Users.objects.create_user(
-                        username=cognito_user.username, password=None,
-                        user_data=user_data, **cognito_user._data
-                    )
-                else:
-                    self.Users.objects.create_user(
-                        username=cognito_user.username, password=None,
-                        **cognito_user._data
-                    )
 
     def update_session(self, request):
         """

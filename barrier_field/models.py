@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
@@ -10,6 +12,8 @@ from barrier_field.client import cognito
 from barrier_field.utils import get_attr_map, \
     get_custom_attrs_from_options, get_user_data_model, is_enabled, \
     get_user_data_model_fields
+
+logger = logging.getLogger(__name__)
 
 
 # BaseParent
@@ -83,6 +87,7 @@ def post_save_sync(sender, **kwargs):
     """
     Save data after user/user data model is saved
     """
+    logger.debug('BarrierField -> Post sync save')
     if is_enabled():
         if sender == get_user_data_model():
             try:

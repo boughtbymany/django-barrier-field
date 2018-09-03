@@ -1,6 +1,4 @@
 import os
-from uuid import uuid4
-import qrcode
 
 from django.conf import settings
 from django.contrib import messages
@@ -19,7 +17,7 @@ from barrier_field.backend import register, complete_login
 from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
     MFAMismatch, CognitoInvalidPassword
-from barrier_field.utils import get_user_model
+from barrier_field.utils import get_user_model, generate_and_save_qr_code
 
 
 class CognitoLogIn(LoginView):
@@ -223,10 +221,7 @@ class SetSoftwareMFA(FormView):
         secret_code = response['SecretCode']
         OTP = f'otpauth://totp/Username:{self.request.user.username}' \
               f'?secret={secret_code}&issuer=BoughtByMany'
-        qr_code = qrcode.make(OTP)
-        save_location = f'static/temp/code-{uuid4()}.png'
-        self.request.session['qr_code_loc'] = save_location
-        qr_code.save(save_location)
+        save_location = generate_and_save_qr_code(self. request, OTP)
         context['qr_code'] = save_location.replace('static/', '')
         context['token_code'] = secret_code
         context['mfa_type'] = 'SOFTWARE'

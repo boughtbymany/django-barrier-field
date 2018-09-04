@@ -83,6 +83,15 @@ class CognitoAuth:
             }
 
 
+def barrier_field_login(request, user):
+    """
+    Remove temporary session context data (stored for MFA login completion)
+    """
+    request.session.pop('login_data')
+    login(request, user)
+
+
 def complete_login(request, auth_response):
+    request.session.pop('login_data')
     user = authenticate(request, cognito_auth=auth_response)
     login(request, user)

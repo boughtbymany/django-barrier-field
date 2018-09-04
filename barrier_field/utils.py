@@ -4,6 +4,8 @@ import secrets
 import string
 from pathlib import Path
 from uuid import uuid4
+
+import boto3
 import qrcode
 
 from django.conf import settings
@@ -181,3 +183,21 @@ def generate_and_save_qr_code(request, OTP):
     request.session['qr_code_loc'] = save_location
     qr_code.save(save_location)
     return save_location
+
+
+def aws_assume_role(access_key, secret_key, role_arn):
+    client = boto3.client(
+        'sts',
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key
+    )
+
+    credentials = client.assume_role(
+        RoleArn=role_arn,
+        RoleSessionName='barrier-field-assumed-role'
+    )['Credentials']
+    return {
+        'aws_access_key_id': credentials['AccessKeyId'],
+        'aws_secret_access_key': credentials['SecretAccessKey'],
+        'aws_session_token': credentials['SessionToken']
+    }

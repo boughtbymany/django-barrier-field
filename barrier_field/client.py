@@ -1,3 +1,4 @@
+import boto3
 from django.conf import settings
 from warrant import Cognito, AWSSRP
 
@@ -8,6 +9,36 @@ from barrier_field.utils import get_user_model, get_user_data_model_fields, \
 
 
 class CognitoBarrierField(Cognito):
+    def __init__(
+            self, user_pool_id, client_id,user_pool_region=None,
+            username=None, id_token=None, refresh_token=None,
+            access_token=None, client_secret=None,
+            access_key=None, secret_key=None, session_token=None
+            ):
+        super(CognitoBarrierField, self).__init__(user_pool_id, client_id)
+        self.user_pool_id = user_pool_id
+        self.client_id = client_id
+        self.user_pool_region = self.user_pool_id.split('_')[0]
+        self.username = username
+        self.id_token = id_token
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+        self.client_secret = client_secret
+        self.token_type = None
+        self.custom_attributes = None
+        self.base_attributes = None
+
+        boto3_client_kwargs = {}
+        if access_key and secret_key:
+            boto3_client_kwargs['aws_access_key_id'] = access_key
+            boto3_client_kwargs['aws_secret_access_key'] = secret_key
+        if session_token:
+            boto3_client_kwargs['aws_session_token'] = session_token
+        if user_pool_region:
+            boto3_client_kwargs['region_name'] = user_pool_region
+
+        self.client = boto3.client('cognito-idp', **boto3_client_kwargs)
+
     def auth_error_handler(self, exception):
         """
         Handle generic botocore 'errorfactory' errors
@@ -220,5 +251,6 @@ cognito = CognitoBarrierField(
     settings.COGNITO_USER_POOL_ID,
     settings.COGNITO_APP_ID,
     access_key=getattr(settings, 'AWS_ACCESS_KEY_ID', None),
-    secret_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None)
+    secret_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None),
+    session_token=getattr(settings, 'AWS_SESSION_TOKEN', None)
 )

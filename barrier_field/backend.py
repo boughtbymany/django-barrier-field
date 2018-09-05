@@ -40,14 +40,13 @@ class CognitoAuth:
         :return:
         """
         cognito_user = cognito
+        cognito.username = username
 
         if not is_enabled():
             return None
 
         if not cognito_auth:
             # New user session authentication
-            cognito_user = cognito
-            cognito.username = username
             try:
                 cognito_user.authenticate(password, request)
             except Exception as e:
@@ -83,6 +82,17 @@ class CognitoAuth:
             }
 
 
+def barrier_field_login(request, user):
+    """
+    Remove temporary session context data (stored for MFA login completion)
+    """
+    request.session.pop('login_data')
+    login(request, user)
+
+
 def complete_login(request, auth_response):
-    user = authenticate(request, cognito_auth=auth_response)
+    login_data = request.session.pop('login_data')
+    user = authenticate(
+        request, username=login_data['username'], cognito_auth=auth_response
+    )
     login(request, user)

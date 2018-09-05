@@ -2,7 +2,7 @@ import os
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, logout
 from django.contrib.auth.views import LoginView, LogoutView
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
@@ -13,7 +13,7 @@ from django.views.generic import FormView, TemplateView
 from warrant.exceptions import ForceChangePasswordException
 
 from barrier_field import forms
-from barrier_field.backend import register, complete_login
+from barrier_field.backend import register, complete_login, barrier_field_login
 from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
     MFAMismatch, CognitoInvalidPassword
@@ -25,15 +25,15 @@ class CognitoLogIn(LoginView):
 
     def form_valid(self, form):
         try:
+            self.request.session['login_data'] = self.request.POST
             user = authenticate(
                 self.request,
                 username=form.cleaned_data['username'],
                 password=form.cleaned_data['password']
             )
-            login(self.request, user)
+            barrier_field_login(self.request, user)
         except ForceChangePasswordException:
             # New user must change their temporary password
-            self.request.session['login_data'] = self.request.POST
             return redirect(reverse('force-change-password'))
         except MFARequiredSMS:
             return redirect(reverse('sms-mfa'))
@@ -82,7 +82,7 @@ class Register(FormView):
             username=create_user['username'],
             password=create_user['password']
         )
-        login(self.request, new_user)
+        barrier_field_login(self.request, new_user)
         return super(Register, self).form_valid(form)
 
 
@@ -130,11 +130,10 @@ class ForceChangePassword(FormView):
             return super(ForceChangePassword, self).form_invalid(form)
         else:
             # Remove login data from session
-            self.request.session.pop('login_data')
             user = authenticate(
                 username=cognito.username, password=new_password
             )
-            login(self.request, user)
+            barrier_field_login(self.request, user)
             return redirect('/')
 
 
@@ -172,8 +171,11 @@ class SMSMFA(FormView):
 
     def form_valid(self, form):
         code = form.cleaned_data['mfa_code']
+        username = cognito.username
+        if not username:
+            username = self.request.session['login_data']['username']
         response = cognito.respond_to_auth_challenge(
-            'SMS_MFA', code, cognito.username,
+            'SMS_MFA', code, username,
             self.request.session.pop('MFA_CHALLENGE').get('Session')
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
@@ -192,9 +194,12 @@ class SoftwareMFA(FormView):
 
     def form_valid(self, form):
         code = form.cleaned_data['mfa_code']
+        username = cognito.username
+        if not username:
+            username = self.request.session['login_data']['username']
         try:
             response = cognito.respond_to_auth_challenge(
-                'SOFTWARE_TOKEN_MFA', code, cognito.username,
+                'SOFTWARE_TOKEN_MFA', code, username,
                 self.request.session.get('MFA_CHALLENGE').get('Session')
             )
         except Exception as e:

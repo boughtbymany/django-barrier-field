@@ -201,3 +201,7 @@ def aws_assume_role(access_key, secret_key, role_arn):
         'aws_secret_access_key': credentials['SecretAccessKey'],
         'aws_session_token': credentials['SessionToken']
     }
+
+
+def verify_user_email(cognito_client):
+    cognito_client.admin_update_profile({'email_verified': 'true'})

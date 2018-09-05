@@ -17,7 +17,8 @@ from barrier_field.backend import register, complete_login, barrier_field_login
 from barrier_field.client import cognito
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
     MFAMismatch, CognitoInvalidPassword
-from barrier_field.utils import get_user_model, generate_and_save_qr_code
+from barrier_field.utils import get_user_model, generate_and_save_qr_code, \
+    verify_user_email
 
 
 class CognitoLogIn(LoginView):
@@ -129,7 +130,7 @@ class ForceChangePassword(FormView):
                 )
             return super(ForceChangePassword, self).form_invalid(form)
         else:
-            # Remove login data from session
+            verify_user_email(cognito)
             user = authenticate(
                 username=cognito.username, password=new_password
             )

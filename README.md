@@ -85,13 +85,13 @@ from django.db import models
 class UserDetails(models.Model):
     name = models.CharField(max_length=255, blank=True)
     locale = models.CharField(max_length=255, blank=True)
-    gender = modelsCharField(max_length=10, blank=True)
+    gender = models.CharField(max_length=10, blank=True)
 
 ```
 
 Settings:
 ```python
-USER_DATA_MODEL = 'some_app.UserDetails'
+BARRIER_FIELD_USERDATA_MODEL = 'some_app.UserDetails'
 ```
 
 ### Standard attributes
@@ -141,6 +141,25 @@ You can chose to clear that data  every time the user logs out by adding the fol
 ```python
 CLEAR_USER_ON_LOGOUT = True
 ```
+
+## Supported account views
+
+The following is a list of views supported by Barrier Field. This views effectively replace Django's account views.
+
+* Login - Authenticate user with username and password and create session
+* Logout - Remove user session
+* Register - User registration form
+* Update - Update user details in Cognito
+* mfa settings - View the users current MFA configuration
+* associate mfa - Set user MFA settings
+* sms mfa - Verify user MFA with SMS
+* software mfa - Verify user MFA with SMS
+* change password - Change password triggered by user
+* force change password - Change password triggered by Cognito
+* forgot password - Email user password change confirmation number
+* forgot password sent - Confirmation page for sent email
+* forgot password confirm - Form for user to enter code they have been emailed, and new password
+
 
 ## Manage commands
 

@@ -59,7 +59,7 @@ class CognitoBarrierField(Cognito):
                 # Handle disabled user
                 if error['Message'] == 'User is disabled':
                     self.sync_cache(
-                        {'username': cognito.username}, deactivate=True
+                        {'username': self.username}, deactivate=True
                     )
                     return None
                 if error['Message'] == 'Incorrect username or password.':
@@ -255,11 +255,12 @@ class CognitoBarrierField(Cognito):
                     )
 
 
-cognito = CognitoBarrierField(
-    settings.COGNITO_USER_POOL_ID,
-    settings.COGNITO_APP_ID,
-    access_key=getattr(settings, 'AWS_ACCESS_KEY_ID', None),
-    secret_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None),
-    session_token=getattr(settings, 'AWS_SESSION_TOKEN', None),
-    assume_role_arn=getattr(settings, 'ASSUME_ROLE_ARN', None)
-)
+def cognito_client():
+    return CognitoBarrierField(
+        settings.COGNITO_USER_POOL_ID,
+        settings.COGNITO_APP_ID,
+        access_key=getattr(settings, 'AWS_ACCESS_KEY_ID', None),
+        secret_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None),
+        session_token=getattr(settings, 'AWS_SESSION_TOKEN', None),
+        assume_role_arn=getattr(settings, 'ASSUME_ROLE_ARN', None)
+    )

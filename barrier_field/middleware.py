@@ -4,7 +4,7 @@ from pathlib import Path
 
 from django.conf import settings
 
-from barrier_field.client import cognito
+from barrier_field.client import cognito_client
 
 
 class RefreshCognito:
@@ -15,6 +15,7 @@ class RefreshCognito:
 
     def __call__(self, request):
         response = self.get_response(request)
+        cognito = cognito_client()
 
         # Refresh local cognito session
         if (

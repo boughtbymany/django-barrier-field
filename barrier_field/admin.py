@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
 
-from barrier_field.client import cognito
+from barrier_field.client import cognito_client
 from barrier_field.models import User
 from barrier_field.utils import get_user_data_model, verify_user_email
 from barrier_field.reverse_admin import ReverseModelAdmin
@@ -9,10 +9,11 @@ from barrier_field.reverse_admin import ReverseModelAdmin
 
 class AdditionalUserFields(forms.ModelForm):
     email_address_verified = forms.BooleanField(required=False)
+    cognito = cognito_client()
 
     def get_initial_for_field(self, field, field_name):
-        cognito.username = self.instance.username
-        user = cognito.get_user()
+        self.cognito.username = self.instance.username
+        user = self.cognito.get_user()
 
         if field_name == 'email_address_verified':
             return user.email_verified
@@ -20,11 +21,11 @@ class AdditionalUserFields(forms.ModelForm):
         return super().get_initial_for_field(field, field_name)
 
     def save(self, commit=True):
-        cognito.username = self.instance.username
+        self.cognito.username = self.instance.username
         email_address_verified = self.cleaned_data.pop(
             'email_address_verified', False
         )
-        verify_user_email(cognito, set=email_address_verified)
+        verify_user_email(self.cognito, set=email_address_verified)
 
         # TODO: Add phone number verified support
         # if self.cleaned_data.get('phone_number_verified'):

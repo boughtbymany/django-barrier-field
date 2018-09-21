@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 
-from barrier_field.client import cognito
+from barrier_field.client import cognito_client
 from barrier_field.utils import get_attr_map, \
     get_custom_attrs_from_options, get_custom_attrs, \
     generate_temporary_password, get_required_attrs
@@ -54,6 +54,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Validate and create user in cognito
         # Check username format
+        cognito = cognito_client()
         username = options['username']
         try:
             validate_email(username)

@@ -8,13 +8,21 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('username')
+        parser.add_argument('--key')
+        parser.add_argument('--value')
 
     def handle(self, *args, **options):
         cognito = cognito_client()
         username = options['username']
         cognito.username = username
 
+        key = options['key']
+        value = options['value']
+
+        if not key and value:
+            raise Exception('Key and value required.')
+
         cognito.admin_update_profile(
-            {'email_verified': str('true')}
+            {key: value}
         )
         self.stdout.write(f'User {username} unverified')

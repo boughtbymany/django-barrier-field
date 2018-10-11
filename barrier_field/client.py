@@ -1,23 +1,26 @@
 import boto3
 from django.conf import settings
+
 from jose import jwt
 from jose.exceptions import JWTClaimsError, JWTError
 from warrant import Cognito, AWSSRP, TokenVerificationException
+from django.shortcuts import redirect
+from django.urls import (reverse, reverse_lazy)
 
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
-    MFAMismatch, CognitoInvalidPassword
+    MFAMismatch, CognitoInvalidPassword, UserNotConfirmed
 from barrier_field.utils import get_user_model, get_user_data_model_fields, \
     get_user_data_model, aws_assume_role
 
 
 class CognitoBarrierField(Cognito):
     def __init__(
-            self, user_pool_id, client_id,user_pool_region=None,
+            self, user_pool_id, client_id, user_pool_region=None,
             username=None, id_token=None, refresh_token=None,
             access_token=None, client_secret=None,
             access_key=None, secret_key=None, session_token=None,
             assume_role_arn=None
-            ):
+    ):
         super(CognitoBarrierField, self).__init__(user_pool_id, client_id)
         self.user_pool_id = user_pool_id
         self.client_id = client_id
@@ -66,37 +69,41 @@ class CognitoBarrierField(Cognito):
                     return None
                 if error['Message'] == 'Incorrect username or password.':
                     return None
-            if error['Code'] == 'UserNotFoundException':
+            elif error['Code'] == 'UserNotFoundException':
                 return None
-            if error['Code'] == 'CodeMismatchException':
+            elif error['Code'] == 'CodeMismatchException':
                 raise MFAMismatch()
-            if error['Code'] == 'InvalidPasswordException':
+            elif error['Code'] == 'InvalidPasswordException':
                 raise CognitoInvalidPassword()
+            elif error['Code'] == 'UserNotConfirmedException':
+                raise UserNotConfirmed()
             raise exception
         else:
             raise exception
 
-    def verify_token(self,token,id_name,token_use):
+    def verify_token(self, token, id_name, token_use):
         kid = jwt.get_unverified_header(token).get('kid')
         unverified_claims = jwt.get_unverified_claims(token)
         token_use_verified = unverified_claims.get('token_use') == token_use
         if not token_use_verified:
-            raise TokenVerificationException('Your {} token use could not be verified.')
+            raise TokenVerificationException(
+                'Your {} token use could not be verified.')
         hmac_key = self.get_key(kid)
         try:
-            verified = jwt.decode(token,hmac_key,algorithms=['RS256'],
-                   audience=unverified_claims.get('aud'),
-                   issuer=unverified_claims.get('iss'))
+            verified = jwt.decode(token, hmac_key, algorithms=['RS256'],
+                                  audience=unverified_claims.get('aud'),
+                                  issuer=unverified_claims.get('iss'))
         except JWTClaimsError:
             verified = jwt.decode(
-                token,hmac_key,algorithms=['RS256'],
+                token, hmac_key, algorithms=['RS256'],
                 audience=unverified_claims.get('aud'),
                 issuer=unverified_claims.get('iss'),
                 access_token=self.access_token
             )
         except JWTError:
-            raise TokenVerificationException('Your {} token could not be verified.')
-        setattr(self,id_name,token)
+            raise TokenVerificationException(
+                'Your {} token could not be verified.')
+        setattr(self, id_name, token)
         return verified
 
     def authenticate(self, password, request):
@@ -127,20 +134,17 @@ class CognitoBarrierField(Cognito):
                           'access_token', 'access')
         self.token_type = tokens['AuthenticationResult']['TokenType']
 
-
     def admin_disable_user(self):
         self.client.admin_disable_user(
             UserPoolId=self.user_pool_id,
             Username=self.username
         )
 
-
     def admin_enable_user(self):
         self.client.admin_enable_user(
             UserPoolId=self.user_pool_id,
             Username=self.username
         )
-
 
     def respond_to_auth_challenge(self, challenge_type, challenge_response,
                                   username, session):
@@ -166,13 +170,11 @@ class CognitoBarrierField(Cognito):
         self.token_type = tokens['AuthenticationResult']['TokenType']
         return tokens
 
-
     def associate_software_token(self, request):
         response = self.client.associate_software_token(
             AccessToken=self.access_token
         )
         return response
-
 
     def verify_software_token(self, request, mfa_code):
         response = self.client.verify_software_token(
@@ -180,7 +182,6 @@ class CognitoBarrierField(Cognito):
             UserCode=mfa_code
         )
         return response
-
 
     def update_software_mfa(self, request, enabled):
         response = self.client.set_user_mfa_preference(
@@ -191,7 +192,6 @@ class CognitoBarrierField(Cognito):
         )
         return response
 
-
     def update_sms_mfa(self, request, enabled):
         response = self.client.set_user_mfa_preference(
             SMSMfaSettings={
@@ -201,11 +201,10 @@ class CognitoBarrierField(Cognito):
         )
         return response
 
-
     def get_user_detailed(self):
         user = self.client.get_user(
-                AccessToken=self.access_token
-            )
+            AccessToken=self.access_token
+        )
         return user
 
     def sync_cache(self, cognito_user, deactivate=False):

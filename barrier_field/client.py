@@ -1,6 +1,8 @@
 import boto3
 from django.conf import settings
-from warrant import Cognito, AWSSRP
+from jose import jwt
+from jose.exceptions import JWTClaimsError, JWTError
+from warrant import Cognito, AWSSRP, TokenVerificationException
 
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
     MFAMismatch, CognitoInvalidPassword
@@ -59,7 +61,7 @@ class CognitoBarrierField(Cognito):
                 # Handle disabled user
                 if error['Message'] == 'User is disabled':
                     self.sync_cache(
-                        {'username': cognito.username}, deactivate=True
+                        {'username': self.username}, deactivate=True
                     )
                     return None
                 if error['Message'] == 'Incorrect username or password.':
@@ -74,6 +76,28 @@ class CognitoBarrierField(Cognito):
         else:
             raise exception
 
+    def verify_token(self,token,id_name,token_use):
+        kid = jwt.get_unverified_header(token).get('kid')
+        unverified_claims = jwt.get_unverified_claims(token)
+        token_use_verified = unverified_claims.get('token_use') == token_use
+        if not token_use_verified:
+            raise TokenVerificationException('Your {} token use could not be verified.')
+        hmac_key = self.get_key(kid)
+        try:
+            verified = jwt.decode(token,hmac_key,algorithms=['RS256'],
+                   audience=unverified_claims.get('aud'),
+                   issuer=unverified_claims.get('iss'))
+        except JWTClaimsError:
+            verified = jwt.decode(
+                token,hmac_key,algorithms=['RS256'],
+                audience=unverified_claims.get('aud'),
+                issuer=unverified_claims.get('iss'),
+                access_token=self.access_token
+            )
+        except JWTError:
+            raise TokenVerificationException('Your {} token could not be verified.')
+        setattr(self,id_name,token)
+        return verified
 
     def authenticate(self, password, request):
         """
@@ -255,11 +279,12 @@ class CognitoBarrierField(Cognito):
                     )
 
 
-cognito = CognitoBarrierField(
-    settings.COGNITO_USER_POOL_ID,
-    settings.COGNITO_APP_ID,
-    access_key=getattr(settings, 'AWS_ACCESS_KEY_ID', None),
-    secret_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None),
-    session_token=getattr(settings, 'AWS_SESSION_TOKEN', None),
-    assume_role_arn=getattr(settings, 'ASSUME_ROLE_ARN', None)
-)
+def cognito_client():
+    return CognitoBarrierField(
+        settings.COGNITO_USER_POOL_ID,
+        settings.COGNITO_APP_ID,
+        access_key=getattr(settings, 'AWS_ACCESS_KEY_ID', None),
+        secret_key=getattr(settings, 'AWS_SECRET_ACCESS_KEY', None),
+        session_token=getattr(settings, 'AWS_SESSION_TOKEN', None),
+        assume_role_arn=getattr(settings, 'ASSUME_ROLE_ARN', None)
+    )

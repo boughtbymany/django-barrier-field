@@ -8,7 +8,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from swapper import swappable_setting, get_model_name
 
-from barrier_field.client import cognito
+from barrier_field.client import cognito_client
 from barrier_field.utils import get_attr_map, \
     get_custom_attrs_from_options, get_user_data_model, is_enabled, \
     get_user_data_model_fields
@@ -40,6 +40,7 @@ class User(AbstractUser):
         swappable = swappable_setting('barrier_field', 'User')
 
     def sync_cognito(self, include_custom=False):
+        cognito = cognito_client()
         user_data = self.__dict__
         cognito_data = {}
         for data in user_data.keys():

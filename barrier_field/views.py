@@ -14,7 +14,7 @@ from warrant.exceptions import ForceChangePasswordException
 
 from barrier_field import forms
 from barrier_field.backend import register, complete_login, barrier_field_login
-from barrier_field.client import cognito
+from barrier_field.client import cognito_client
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
     MFAMismatch, CognitoInvalidPassword
 from barrier_field.utils import get_user_model, generate_and_save_qr_code, \
@@ -109,6 +109,7 @@ class ForceChangePassword(FormView):
     template_name = 'barrier_field/update_cognito_password.html'
 
     def form_valid(self, form):
+        cognito = cognito_client()
         login_form_data = self.request.session.get('login_data')
         current_password = login_form_data.get('password')
         new_password = form.cleaned_data['password1']
@@ -143,6 +144,7 @@ class ChangePassword(FormView):
     template_name = 'barrier_field/change_cognito_password.html'
 
     def form_valid(self, form):
+        cognito = cognito_client()
         current_password = form.cleaned_data['current_password']
         new_password = form.cleaned_data['new_password1']
         try:
@@ -171,6 +173,7 @@ class SMSMFA(FormView):
         return context
 
     def form_valid(self, form):
+        cognito = cognito_client()
         code = form.cleaned_data['mfa_code']
         username = cognito.username
         if not username:
@@ -194,6 +197,7 @@ class SoftwareMFA(FormView):
         return context
 
     def form_valid(self, form):
+        cognito = cognito_client()
         code = form.cleaned_data['mfa_code']
         username = cognito.username
         if not username:
@@ -222,6 +226,7 @@ class SetSoftwareMFA(FormView):
     template_name = 'barrier_field/associate_software_mfa.html'
 
     def get_context_data(self, **kwargs):
+        cognito = cognito_client()
         context = super(SetSoftwareMFA, self).get_context_data(**kwargs)
         response = cognito.associate_software_token(self.request)
         secret_code = response['SecretCode']
@@ -234,6 +239,7 @@ class SetSoftwareMFA(FormView):
         return context
 
     def form_valid(self, form):
+        cognito = cognito_client()
         # Remove temp QR code
         qr_code_loc = self.request.session['qr_code_loc']
         os.remove(qr_code_loc)
@@ -254,6 +260,7 @@ class MFASettings(FormView):
     software_enabled = None
 
     def get_initial(self):
+        cognito = cognito_client()
         user = cognito.get_user_detailed()
         mfa_preferences = user.get('UserMFASettingList')
 
@@ -271,6 +278,7 @@ class MFASettings(FormView):
         return initial
 
     def form_valid(self, form):
+        cognito = cognito_client()
         sms = (
             form.cleaned_data['sms_mfa'],
             self.sms_enabled
@@ -300,6 +308,7 @@ class ForgotPassword(FormView):
     template_name = 'barrier_field/forgot_password.html'
 
     def form_valid(self, form):
+        cognito = cognito_client()
         email_address = form.cleaned_data['email_address']
         cognito.username = email_address
         cognito.initiate_forgot_password()
@@ -315,6 +324,7 @@ class ForgotPasswordConfirm(FormView):
     form_class = forms.ForgotPasswordConfirm
 
     def form_valid(self, form):
+        cognito = cognito_client()
         email_address = form.cleaned_data['email_address']
         verification_code = form.cleaned_data['verification_code']
         new_password = form.cleaned_data['password2']

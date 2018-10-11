@@ -1,6 +1,6 @@
 from django.core.management import BaseCommand
 
-from barrier_field.client import cognito
+from barrier_field.client import cognito_client
 
 
 class Command(BaseCommand):
@@ -10,6 +10,7 @@ class Command(BaseCommand):
         parser.add_argument('username')
 
     def handle(self, *args, **options):
+        cognito = cognito_client()
         username = options['username']
         cognito.username = username
         cognito.admin_delete_user()

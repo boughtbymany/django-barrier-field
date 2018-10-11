@@ -2,9 +2,8 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login
 from warrant import Cognito
 
-from barrier_field.client import cognito
-from barrier_field.utils import get_attr_map, get_user_data_model_fields, \
-    get_user_data_model, is_enabled, get_user_model
+from barrier_field.client import cognito_client
+from barrier_field.utils import get_attr_map, is_enabled, get_user_model
 
 
 def register(request, new_user):
@@ -21,6 +20,7 @@ def register(request, new_user):
 
 class CognitoAuth:
     Users = get_user_model()
+    cognito = cognito_client()
     cognito_mapping = get_attr_map()
 
     def get_user(self, request):
@@ -39,8 +39,7 @@ class CognitoAuth:
         password or completeing MFA), send the authorised cognito token
         :return:
         """
-        cognito_user = cognito
-        cognito.username = username
+        self.cognito.username = username
 
         if not is_enabled():
             return None
@@ -48,24 +47,24 @@ class CognitoAuth:
         if not cognito_auth:
             # New user session authentication
             try:
-                cognito_user.authenticate(password, request)
+                self.cognito.authenticate(password, request)
             except Exception as e:
-                resp = cognito.auth_error_handler(e)
+                resp = self.cognito.auth_error_handler(e)
                 return resp
         else:
             # Validate authentication
-            cognito.verify_token(
+            self.cognito.verify_token(
                 cognito_auth['AuthenticationResult']['IdToken'],
                 'id_token','id'
             )
-            cognito.verify_token(
+            self.cognito.verify_token(
                 cognito_auth['AuthenticationResult']['AccessToken'],
                 'access_token', 'access'
             )
 
         self.update_session(request)
-        user = cognito_user.get_user(self.cognito_mapping)
-        cognito_user.sync_cache(user)
+        user = self.cognito.get_user(self.cognito_mapping)
+        self.cognito.sync_cache(user)
         cache_user = self.Users.objects.get(username=user.pk)
         return cache_user
 
@@ -75,10 +74,10 @@ class CognitoAuth:
         """
         if getattr(request, 'session', False):
             request.session['cognito_auth'] = {
-                'access_token': cognito.access_token,
-                'refresh_token': cognito.refresh_token,
-                'token_type': cognito.token_type,
-                'id_token': cognito.id_token
+                'access_token': self.cognito.access_token,
+                'refresh_token': self.cognito.refresh_token,
+                'token_type': self.cognito.token_type,
+                'id_token': self.cognito.id_token
             }
 
 

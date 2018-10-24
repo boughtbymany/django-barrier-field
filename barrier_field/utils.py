@@ -204,9 +204,9 @@ def aws_assume_role(access_key, secret_key, role_arn):
 
 
 def verify_user_email(cognito_client, set=True):
-    cognito_client.admin_update_profile(
-        {'email_verified': str(set).lower()}
-    )
+    cognito_client.admin_update_profile({
+        'email_verified': str(set).lower()
+    })
 
 
 def verify_user_phone(cognito_client, set=True):

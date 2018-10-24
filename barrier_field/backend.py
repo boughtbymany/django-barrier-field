@@ -1,22 +1,8 @@
-from django.conf import settings
 from django.contrib.auth import authenticate, login
-from warrant import Cognito
+
 
 from barrier_field.client import cognito_client
 from barrier_field.utils import get_attr_map, is_enabled, get_user_model
-
-
-def register(request, new_user):
-
-    pool_id = settings.COGNITO_USER_POOL_ID
-    app_id = settings.COGNITO_APP_ID
-    cog = Cognito(pool_id, app_id)
-    cog.add_base_attributes(email=new_user['username'])
-    cog.add_custom_attributes(
-        is_staff=str(int(new_user['is_staff'])),
-        is_superuser=str(int(new_user['is_superuser']))
-    )
-    cog.register(new_user['username'], new_user['password'])
 
 
 class CognitoAuth:
@@ -66,7 +52,7 @@ class CognitoAuth:
         self.update_session(request)
         user = self.cognito.get_user(self.cognito_mapping)
         self.cognito.sync_cache(user)
-        cache_user = self.Users.objects.get(username=user.pk)
+        cache_user = self.Users.objects.get(email=user.pk)
         return cache_user
 
     def update_session(self, request):

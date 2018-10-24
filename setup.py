@@ -41,7 +41,7 @@ setup(
         'warrant==0.6.1',
         'qrcode[pil]==6.0.0',
         'Pillow==5.2.0',
-        'swapper==1.1.0'
+        'swapper==1.1.0',
     ],
     include_package_data=True,
     classifiers=[

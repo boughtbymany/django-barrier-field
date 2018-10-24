@@ -26,7 +26,6 @@ urlpatterns = [
          name='confirm-user'),
     path('update/', views.Update.as_view(), name='update'),
     path('login/', views.CognitoLogIn.as_view(), name='cognito-login'),
-    #path('user-comfirm/', views.UserComfirm.as_view(), name='user-comfirm'),
     path('logout/', views.CognitoLogOut.as_view(), name='cognito-logout'),
 
     # AUTHORISED MFA SETTINGS

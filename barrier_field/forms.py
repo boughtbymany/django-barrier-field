@@ -1,10 +1,11 @@
 from django import forms
+from django.contrib.auth import get_user_model
+from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm, \
     AuthenticationForm
 
 from barrier_field.exceptions import catch_login_exceptions
-from barrier_field.models import User
 
 
 class LoginForm(AuthenticationForm):
@@ -74,7 +75,13 @@ class PasswordUpdateForm(forms.Form):
 
 
 class PasswordChangeForm(PasswordUpdateForm):
+
+    def __init__(self, user=None, *args, **kwargs):
+        self.user = user
+        super(PasswordChangeForm, self).__init__(*args, **kwargs)
+
     field_order = ['current_password', 'password1', 'password2']
+
     current_password = forms.CharField(
         required=True,
         label='Current password',
@@ -88,12 +95,64 @@ class PasswordChangeForm(PasswordUpdateForm):
         )
     )
 
+    def clean_current_password(self):
+        """
+        Validates that the old_password field is correct.
+        """
+        old_password = self.cleaned_data["current_password"]
+        if not self.user.check_password(old_password):
+            raise forms.ValidationError(
+                "current password is wrong"
+            )
+        return old_password
 
-class UserCreateForm(UserCreationForm):
 
-    class Meta:
-        model = User
-        fields = ('email', 'username', 'phone_number')
+class UserCreationForm(forms.ModelForm):
+
+    error_messages = {
+        'duplicate_email': _("A user with that email already exists."),
+        'password_mismatch': _("The two password fields didn't match."),
+    }
+
+    password1 = forms.CharField(
+        label=_("Password"),
+        widget=forms.PasswordInput)
+    password2 = forms.CharField(
+        label=_("Password confirmation"),
+        widget=forms.PasswordInput,
+        help_text=_("Enter the same password as above, for verification."))
+
+    class Meta:  # noqa: D101
+        model = get_user_model()
+        fields = ('email', )
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        try:
+            get_user_model()._default_manager.get(email=email)
+        except get_user_model().DoesNotExist:
+            return email
+        raise forms.ValidationError(
+            self.error_messages['duplicate_email'],
+            code='duplicate_email',
+        )
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError(
+                self.error_messages['password_mismatch'],
+                code='password_mismatch',
+            )
+        return password2
+
+    def save(self, commit=True):
+        user = super(UserCreationForm, self).save(commit=False)
+        user.set_password(self.cleaned_data["password1"])
+        if commit:
+            user.save()
+        return user
 
 
 class UserUpdateform(UserChangeForm):
@@ -124,6 +183,17 @@ class MFASettings(forms.Form):
 class ForgotPassword(forms.Form):
     email_address = forms.CharField(max_length=255, required=True)
 
+    def clean_email_address(self):
+        email_address = self.cleaned_data.get("email_address")
+
+        try:
+            get_user_model().objects.get(email=email_address)
+        except get_user_model().DoesNotExist:
+            raise forms.ValidationError(
+                'Invalid Email '
+            )
+        return email_address
+
 
 class ForgotPasswordConfirm(PasswordUpdateForm):
     field_order = [
@@ -153,3 +223,14 @@ class ForgotPasswordConfirm(PasswordUpdateForm):
             }
         )
     )
+
+    def clean_email_address(self):
+        email_address = self.cleaned_data.get("email_address")
+
+        try:
+            get_user_model().objects.get(email=email_address)
+        except get_user_model().DoesNotExist:
+            raise forms.ValidationError(
+                'Invalid Email '
+            )
+        return email_address

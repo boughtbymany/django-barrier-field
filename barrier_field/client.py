@@ -19,7 +19,7 @@ class CognitoBarrierField(Cognito):
             username=None, id_token=None, refresh_token=None,
             access_token=None, client_secret=None,
             access_key=None, secret_key=None, session_token=None,
-            assume_role_arn=None
+            assume_role_arn=None,
     ):
         super(CognitoBarrierField, self).__init__(user_pool_id, client_id)
         self.user_pool_id = user_pool_id
@@ -134,6 +134,12 @@ class CognitoBarrierField(Cognito):
                           'access_token', 'access')
         self.token_type = tokens['AuthenticationResult']['TokenType']
 
+    def admin_create_user(self, data):
+        self.client.admin_create_user(
+            UserPoolId=self.user_pool_id,
+            Username=data['username']
+        )
+
     def admin_disable_user(self):
         self.client.admin_disable_user(
             UserPoolId=self.user_pool_id,
@@ -192,6 +198,15 @@ class CognitoBarrierField(Cognito):
         )
         return response
 
+    def change_password(self, request, current_password, new_password):
+        response = self.client.change_password(
+            AccessToken=request.session['cognito_auth']['access_token'],
+            PreviousPassword=current_password,
+            ProposedPassword=new_password
+        )
+
+        return response
+
     def update_sms_mfa(self, request, enabled):
         response = self.client.set_user_mfa_preference(
             SMSMfaSettings={
@@ -225,7 +240,7 @@ class CognitoBarrierField(Cognito):
             local_user.save()
         else:
             try:
-                local_user = Users.objects.get(username=cognito_user.pk)
+                local_user = Users.objects.get(email=cognito_user.pk)
                 if not local_user.is_active:
                     # Reactive user
                     local_user.is_active = True

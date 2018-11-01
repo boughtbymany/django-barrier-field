@@ -15,7 +15,7 @@ from warrant.exceptions import ForceChangePasswordException
 
 from barrier_field import forms
 
-from barrier_field.backend import complete_login, barrier_field_login
+from barrier_field.backend import complete_login
 from barrier_field.client import cognito_client
 
 from barrier_field.exceptions import MFARequiredSMS, MFARequiredSoftware, \
@@ -142,9 +142,9 @@ class ForceChangePassword(FormView):
         else:
             verify_user_email(cognito)
             user = authenticate(
-                username=cognito.username, password=new_password
+                self.request, username=cognito.username, password=new_password
             )
-            barrier_field_login(self.request, user)
+            login(self.request, user)
             return redirect('/')
 
 
@@ -204,7 +204,7 @@ class SMSMFA(FormView):
             self.request.session.pop('AUTH_CHALLENGE').get('Session')
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
-            complete_login(self.request, response)
+            complete_login(self.request, response, username)
         return redirect(getattr(settings, 'LOGIN_REDIRECT_URL', '/'))
 
 
@@ -237,7 +237,7 @@ class SoftwareMFA(FormView):
                 )
                 return super(SoftwareMFA, self).form_invalid(form)
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
-            complete_login(self.request, response)
+            complete_login(self.request, response, username)
         return redirect(getattr(settings, 'LOGIN_REDIRECT_URL', '/'))
 
 

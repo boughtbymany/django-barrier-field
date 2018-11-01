@@ -36,6 +36,7 @@ class CognitoAuth:
             try:
                 self.cognito.authenticate(password, request)
             except Exception as e:
+                self.update_session(request)
                 resp = self.cognito.auth_error_handler(e)
                 return resp
         else:
@@ -68,17 +69,8 @@ class CognitoAuth:
             }
 
 
-def barrier_field_login(request, user):
-    """
-    Remove temporary session context data (stored for MFA login completion)
-    """
-    request.session.pop('login_data')
-    login(request, user)
-
-
-def complete_login(request, auth_response):
-    login_data = request.session.pop('login_data')
+def complete_login(request, auth_response, username):
     user = authenticate(
-        request, username=login_data['username'], cognito_auth=auth_response
+        request, username=username, cognito_auth=auth_response
     )
     login(request, user)

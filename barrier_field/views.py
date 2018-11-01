@@ -3,7 +3,7 @@ import os
 from django.conf import settings
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth import authenticate, logout
+from django.contrib.auth import authenticate, logout, login
 from django.contrib.auth.views import LoginView, LogoutView
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
@@ -39,13 +39,14 @@ class CognitoLogIn(LoginView):
 
     def form_valid(self, form):
         try:
-            self.request.session['login_data'] = self.request.POST
+            username = form.cleaned_data['username']
+            self.request.session['username'] = username
             user = authenticate(
                 self.request,
-                username=form.cleaned_data['username'],
+                username=username,
                 password=form.cleaned_data['password']
             )
-            barrier_field_login(self.request, user)
+            login(self.request, user)
         except ForceChangePasswordException:
             # New user must change their temporary password
             return redirect(reverse('force-change-password'))
@@ -116,15 +117,16 @@ class ForceChangePassword(FormView):
 
     def form_valid(self, form):
         cognito = cognito_client()
-        login_form_data = self.request.session.get('login_data')
-        current_password = login_form_data.get('password')
+        auth_challenge = self.request.session['AUTH_CHALLENGE']
+        username = self.request.session.get('username')
         new_password = form.cleaned_data['password1']
-
         try:
             # Username can drop off cognito session, if it does, add it back on
             if not cognito.username:
-                cognito.username = login_form_data.get('username')
-            cognito.new_password_challenge(current_password, new_password)
+                cognito.username = username
+            cognito.force_change_password_challenge(
+                auth_challenge['Session'], username, new_password
+            )
         except Exception as e:
             try:
                 cognito.auth_error_handler(e)
@@ -196,10 +198,10 @@ class SMSMFA(FormView):
         code = form.cleaned_data['mfa_code']
         username = cognito.username
         if not username:
-            username = self.request.session['login_data']['username']
+            username = self.request.session['username']
         response = cognito.respond_to_auth_challenge(
             'SMS_MFA', code, username,
-            self.request.session.pop('MFA_CHALLENGE').get('Session')
+            self.request.session.pop('AUTH_CHALLENGE').get('Session')
         )
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
             complete_login(self.request, response)
@@ -220,11 +222,11 @@ class SoftwareMFA(FormView):
         code = form.cleaned_data['mfa_code']
         username = cognito.username
         if not username:
-            username = self.request.session['login_data']['username']
+            username = self.request.session['username']
         try:
             response = cognito.respond_to_auth_challenge(
                 'SOFTWARE_TOKEN_MFA', code, username,
-                self.request.session.get('MFA_CHALLENGE').get('Session')
+                self.request.session.get('AUTH_CHALLENGE').get('Session')
             )
         except Exception as e:
             try:
@@ -236,7 +238,6 @@ class SoftwareMFA(FormView):
                 return super(SoftwareMFA, self).form_invalid(form)
         if response['ResponseMetadata']['HTTPStatusCode'] == 200:
             complete_login(self.request, response)
-        self.request.session.get('MFA_CHALLENGE').get('Session')
         return redirect(getattr(settings, 'LOGIN_REDIRECT_URL', '/'))
 
 

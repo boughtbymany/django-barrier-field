@@ -36,6 +36,7 @@ class CognitoAuth:
             try:
                 self.cognito.authenticate(password, request)
             except Exception as e:
+                self.update_session(request)
                 resp = self.cognito.auth_error_handler(e)
                 return resp
         else:

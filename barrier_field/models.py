@@ -1,18 +1,20 @@
 import logging
-
-from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from swapper import swappable_setting, get_model_name
+from django.utils import timezone
+
+import swapper
 
 from barrier_field.client import cognito_client
-from barrier_field.utils import get_attr_map, \
-    get_custom_attrs_from_options, get_user_data_model, is_enabled, \
-    get_user_data_model_fields
+from barrier_field.utils import (get_attr_map, get_custom_attrs_from_options,
+                                 get_user_data_model, is_enabled, get_user_data_model_fields)
 
+from .managers import UserManager
+from .cognito_actions import register
 logger = logging.getLogger(__name__)
 
 
@@ -22,22 +24,48 @@ class BaseUserData(models.Model):
         abstract = True
 
 
-# Child
-class User(AbstractUser):
+class UserData(BaseUserData):
+    class Meta:
+        swappable = swapper.swappable_setting('barrier_field', 'UserData')
+
+
+class User(AbstractBaseUser, PermissionsMixin, ):
     """
     Extend base django user to include phone number, which is required by
     cognito
     """
-    phone_number = models.CharField(max_length=50, blank=True)
-    user_data_model = settings.BARRIER_FIELD_USERDATA_MODEL
-    user_data_model_name = user_data_model.split('.')[-1]
+
+    email = models.EmailField('Email', unique=True)
+
+    first_name = models.CharField(_('first name'), max_length=30, blank=True)
+    last_name = models.CharField(_('last name'), max_length=150, blank=True)
+    is_staff = models.BooleanField(
+        _('staff status'),
+        default=False,
+        help_text=_(
+            'Designates whether the user can log into this admin site.'),
+    )
+    is_active = models.BooleanField(
+        _('active'),
+        default=True,
+        help_text=_(
+            'Designates whether this user should be treated as active. '
+            'Unselect this instead of deleting accounts.'
+        ),
+    )
+    date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
+
     user_data = models.ForeignKey(
-        get_model_name('barrier_field', user_data_model_name),
-        on_delete=models.CASCADE
+        swapper.get_model_name('barrier_field', 'UserData'),
+        on_delete=models.CASCADE, blank=True, null=True
     )
 
-    class Meta:
-        swappable = swappable_setting('barrier_field', 'User')
+    EMAIL_FIELD = 'email'
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+
+    def register_on_cognito(self, include_custom=False):
+        register(self)
 
     def sync_cognito(self, include_custom=False):
         cognito = cognito_client()
@@ -52,8 +80,7 @@ class User(AbstractUser):
                 continue
             cognito_data[data] = user_data[data]
 
-        cognito.username = cognito_data.pop('username')
-
+        cognito.username = cognito_data.pop('email')
         # Enable/disable cognito user based on 'is_active'
         if not cognito_data.pop('is_active'):
             cognito.admin_disable_user()
@@ -81,6 +108,8 @@ class User(AbstractUser):
             if field_value:
                 additional_data[field] = field_value
         return additional_data
+
+    objects = UserManager()
 
 
 @receiver(post_save)

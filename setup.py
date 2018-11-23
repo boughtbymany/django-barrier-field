@@ -21,7 +21,7 @@ def build_template_files(template_dir):
         for filename in glob.iglob(f'{directory}/*', recursive=True):
             if Path(filename).is_dir():
                 continue
-            directory_listing[1].append(Path(filename).name)
+            directory_listing[1].append(str(Path(filename)))
         template_files.append(directory_listing)
     return template_files
 
@@ -33,7 +33,7 @@ setup(
     author='Bought By Many',
     author_email='bbm@boughtbymany.com',
     packages=find_packages(),
-    data_files=build_template_files('templates'),
+    data_files=build_template_files('barrier_field/templates'),
     url='https://boughtbymany.com',
     zip_safe=False,
     install_requires=[
